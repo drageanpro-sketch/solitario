@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Solitario Klondike ULTRA</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 :root {
@@ -13,15 +14,19 @@
   --card-red: #c0392b;
   --card-black: #111;
   --glow: 0 0 15px rgba(0,255,180,0.3);
+  --success: #2ecc71;
+  --warning: #f39c12;
+  --danger: #e74c3c;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg-main);
   color: white;
   user-select: none;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 body.dark {
@@ -32,11 +37,12 @@ body.dark {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 18px;
+  padding: 12px 20px;
   background: var(--panel);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 25px rgba(0,0,0,0.6);
   z-index: 10;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 #hud .group {
@@ -48,63 +54,116 @@ body.dark {
 .hud-item {
   font-size: 14px;
   opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 button {
   background: linear-gradient(135deg, #1abc9c, #16a085);
   border: none;
   border-radius: 8px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   cursor: pointer;
   font-weight: bold;
   color: #000;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
 }
 
 button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   filter: brightness(1.1);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button.secondary {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+}
+
+button.danger {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+button.success {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+}
+
+.progress-bar {
+  width: 100px;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1abc9c, #2ecc71);
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 #game {
-  padding: 18px;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .top-area {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 25px;
+  margin-bottom: 30px;
+  gap: 20px;
 }
 
 .stock-area, .foundation-area {
   display: flex;
-  gap: 14px;
+  gap: 15px;
 }
 
 .slot {
-  width: 78px;
-  height: 110px;
+  width: 80px;
+  height: 112px;
   border-radius: 12px;
   border: 2px dashed rgba(255,255,255,0.25);
   position: relative;
   box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+  transition: all 0.2s ease;
+}
+
+.slot.highlight {
+  border-color: #1abc9c;
+  background: rgba(26, 188, 156, 0.1);
+  box-shadow: 0 0 20px rgba(26, 188, 156, 0.3);
 }
 
 .tableau {
   display: flex;
-  gap: 14px;
+  gap: 15px;
+  justify-content: center;
 }
 
 .column {
-  width: 78px;
-  min-height: 130px;
+  width: 80px;
+  min-height: 150px;
   position: relative;
 }
 
 .card {
-  width: 78px;
-  height: 110px;
+  width: 80px;
+  height: 112px;
   background: linear-gradient(145deg, #fff, #ddd);
   border-radius: 12px;
   box-shadow:
@@ -116,13 +175,15 @@ button:hover {
   font-weight: bold;
   position: absolute;
   cursor: grab;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.15s ease;
   perspective: 800px;
+  font-size: 24px;
 }
 
 .card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 25px rgba(0,0,0,0.5);
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+  z-index: 100;
 }
 
 .card:active {
@@ -135,27 +196,192 @@ button:hover {
 .card.back {
   background: linear-gradient(135deg, #2980b9, #3498db);
   color: transparent;
+  background-size: 200% 200%;
+  animation: shimmer 3s infinite;
 }
 
+.card.ace { background: linear-gradient(145deg, #ffeb3b, #ffc107); }
+.card.king { background: linear-gradient(145deg, #9b59b6, #8e44ad); }
+.card.queen { background: linear-gradient(145deg, #e74c3c, #c0392b); }
+.card.jack { background: linear-gradient(145deg, #3498db, #2980b9); }
+
 .dragging {
-  opacity: 0.8;
-  transform: scale(1.05) rotate(2deg);
+  opacity: 0.9;
+  transform: scale(1.08) rotate(3deg);
   z-index: 9999;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+  filter: brightness(1.1);
 }
 
 .glow {
-  box-shadow: 0 0 25px rgba(0,255,180,0.8);
+  box-shadow: 0 0 30px rgba(0,255,180,0.9), 0 8px 15px rgba(0,0,0,0.4);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(0,255,180,0.9), 0 8px 15px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 0 45px rgba(0,255,180,1.2), 0 8px 15px rgba(0,0,0,0.4); }
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes celebrate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.achievement-notification {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: rgba(0,0,0,0.9);
+  border-left: 4px solid #f39c12;
+  padding: 15px;
+  border-radius: 8px;
+  z-index: 9999;
+  animation: slideIn 0.3s ease;
+  min-width: 250px;
+}
+
+.achievement-notification.success {
+  border-left-color: #2ecc71;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.9);
+  padding: 12px 24px;
+  border-radius: 8px;
+  z-index: 9999;
+  animation: slideIn 0.3s ease;
+}
+
+.stats-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.95);
+  padding: 30px;
+  border-radius: 15px;
+  z-index: 10000;
+  min-width: 400px;
+  border: 2px solid #1abc9c;
+  backdrop-filter: blur(10px);
+}
+
+.controls-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+
+#victory-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  flex-direction: column;
+  text-align: center;
+}
+
+#victory-screen.active {
+  display: flex;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (max-width: 768px) {
   .card, .slot {
-    width: 60px;
-    height: 85px;
+    width: 65px;
+    height: 91px;
   }
+  
   .column {
-    width: 60px;
+    width: 65px;
   }
+  
+  .tableau {
+    gap: 10px;
+  }
+  
+  .top-area {
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .stock-area, .foundation-area {
+    gap: 10px;
+  }
+  
+  #hud {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+  }
+  
+  #hud .group {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 480px) {
+  .card, .slot {
+    width: 55px;
+    height: 77px;
+    font-size: 18px;
+  }
+  
+  .column {
+    width: 55px;
+  }
+}
+
+.card.selected {
+  outline: 3px solid #f39c12;
+  outline-offset: 2px;
+}
+
+.autoplace-highlight {
+  animation: autoplace 0.8s ease infinite;
+}
+
+@keyframes autoplace {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.difficulty-badge {
+  background: #3498db;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-left: 8px;
 }
 </style>
 </head>
@@ -164,31 +390,37 @@ button:hover {
 
 <div id="hud">
   <div class="group">
-    <button onclick="newGame()">Nuevo</button>
-    <button onclick="undoMove()">Undo</button>
-    <button onclick="autoComplete()">Auto</button>
-    <button onclick="showHint()">Hint</button>
+    <button onclick="newGame()"><i class="fas fa-plus"></i> Nuevo</button>
+    <button onclick="undoMove()" class="secondary"><i class="fas fa-undo"></i> Undo</button>
+    <button onclick="showHint()" class="success"><i class="fas fa-lightbulb"></i> Hint</button>
+    <button onclick="autoComplete()"><i class="fas fa-bolt"></i> Auto</button>
+    <button onclick="showStats()"><i class="fas fa-chart-bar"></i> Stats</button>
   </div>
-
+  
   <div class="group">
-    <div class="hud-item">⏱ <span id="timer">00:00</span></div>
-    <div class="hud-item">🎯 <span id="score">0</span></div>
-    <div class="hud-item">🔁 <span id="moves">0</span></div>
+    <div class="hud-item"><i class="fas fa-clock"></i> <span id="timer">00:00</span></div>
+    <div class="hud-item"><i class="fas fa-star"></i> <span id="score">0</span></div>
+    <div class="hud-item"><i class="fas fa-shoe-prints"></i> <span id="moves">0</span></div>
+    <div class="hud-item"><i class="fas fa-layer-group"></i> <span id="cards-left">52</span></div>
   </div>
-
+  
   <div class="group">
-    <button onclick="toggleTheme()">🌙</button>
-    <button onclick="toggleSound()">🔊</button>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <button onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+    <button onclick="toggleSound()"><i class="fas fa-volume-up"></i></button>
+    <button onclick="showSettings()"><i class="fas fa-cog"></i></button>
   </div>
 </div>
 
 <div id="game">
   <div class="top-area">
     <div class="stock-area">
-      <div id="stock" class="slot"></div>
+      <div id="stock" class="slot" onclick="drawFromStock()"></div>
       <div id="waste" class="slot"></div>
     </div>
-
+    
     <div class="foundation-area">
       <div id="foundation-0" class="slot"></div>
       <div id="foundation-1" class="slot"></div>
@@ -196,7 +428,7 @@ button:hover {
       <div id="foundation-3" class="slot"></div>
     </div>
   </div>
-
+  
   <div class="tableau">
     <div class="column" data-col="0"></div>
     <div class="column" data-col="1"></div>
@@ -208,50 +440,377 @@ button:hover {
   </div>
 </div>
 
-<!-- =========================
-     ULTRA – PARTE 2 VA AQUÍ
-     Drag & Drop real
-     Movimiento múltiple
-     Snap
-     Validaciones
-     Hint system
-========================= -->
+<!-- Pantalla de victoria -->
+<div id="victory-screen">
+  <div style="text-align: center; padding: 40px; background: rgba(0,0,0,0.8); border-radius: 20px; border: 3px solid #f39c12;">
+    <h1 style="font-size: 3em; color: #f39c12; margin-bottom: 20px;">🎉 ¡VICTORIA! 🎉</h1>
+    <div style="font-size: 1.5em; margin-bottom: 30px;">
+      <p>Tiempo: <span id="victory-time">00:00</span></p>
+      <p>Movimientos: <span id="victory-moves">0</span></p>
+      <p>Puntuación: <span id="victory-score">0</span></p>
+    </div>
+    <div style="display: flex; gap: 15px; justify-content: center;">
+      <button onclick="newGame()" style="font-size: 1.2em;"><i class="fas fa-redo"></i> Jugar de nuevo</button>
+      <button onclick="shareVictory()" class="success" style="font-size: 1.2em;"><i class="fas fa-share"></i> Compartir</button>
+    </div>
+  </div>
+</div>
 
 <script>
-/* ==================================================
-   ULTRA DRAG & DROP SYSTEM
-================================================== */
+/* =========================
+   VARIABLES GLOBALES MEJORADAS
+========================= */
+
+let deck = [];
+let stock = [];
+let waste = [];
+let tableau = [[], [], [], [], [], [], []];
+let foundations = [[], [], [], []];
+let history = [];
+
+let score = 0;
+let moves = 0;
+let seconds = 0;
+let timerInterval = null;
+let gameActive = true;
+
+// Estadísticas avanzadas
+let stats = {
+  gamesPlayed: 0,
+  gamesWon: 0,
+  totalTime: 0,
+  totalMoves: 0,
+  bestTime: Infinity,
+  bestScore: 0,
+  streak: 0,
+  maxStreak: 0
+};
+
+// Configuración del juego
+let config = {
+  soundEnabled: true,
+  musicEnabled: true,
+  animations: true,
+  hintDelay: 500,
+  autoMoveDelay: 200,
+  difficulty: 'normal',
+  threeCardMode: false,
+  autoSave: true
+};
+
+// Logros mejorados
+const achievements = {
+  firstMove: { unlocked: false, name: "Primer Paso", desc: "Realiza tu primer movimiento" },
+  firstWin: { unlocked: false, name: "¡Ganador!", desc: "Completa tu primer juego" },
+  speedDemon: { unlocked: false, name: "Demonio Veloz", desc: "Gana en menos de 3 minutos" },
+  perfectGame: { unlocked: false, name: "Juego Perfecto", desc: "Gana sin usar undo" },
+  cardMaster: { unlocked: false, name: "Maestro de Cartas", desc: "Mueve 1000 cartas" },
+  marathon: { unlocked: false, name: "Maratón", desc: "Juega por más de 1 hora" },
+  streak5: { unlocked: false, name: "Racha Caliente", desc: "Gana 5 juegos seguidos" },
+  noHint: { unlocked: false, name: "Autosuficiente", desc: "Gana sin usar hints" }
+};
+
+const SUITS = ["♠", "♥", "♦", "♣"];
+const VALUES = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+const VALUE_POINTS = { "A": 20, "K": 10, "Q": 10, "J": 10, "10": 5, "9": 5, "8": 5, "7": 5, "6": 5, "5": 5, "4": 5, "3": 5, "2": 5 };
+
+/* =========================
+   SISTEMA DE AUDIO MEJORADO
+========================= */
+
+const audio = {
+  move: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-slide-1538.mp3"),
+  flip: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-flip-1554.mp3"),
+  win: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
+  deal: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-dealing-1561.mp3"),
+  error: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"),
+  success: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3")
+};
+
+Object.values(audio).forEach(sound => {
+  sound.volume = 0.3;
+  sound.preload = 'auto';
+});
+
+function playSound(soundName) {
+  if (!config.soundEnabled || !audio[soundName]) return;
+  audio[soundName].currentTime = 0;
+  audio[soundName].play().catch(() => {});
+}
+
+/* =========================
+   INICIALIZACIÓN MEJORADA
+========================= */
+
+function newGame() {
+  if (!confirm("¿Comenzar un nuevo juego? Se perderá el progreso actual.")) return;
+  
+  createDeck();
+  shuffleDeck(deck);
+  
+  resetGameState();
+  dealCards();
+  startTimer();
+  updateProgress();
+  render();
+  saveGame();
+  
+  playSound("deal");
+  
+  // Mostrar notificación de inicio
+  showToast("¡Nuevo juego iniciado!", "success");
+}
+
+function resetGameState() {
+  stock = [];
+  waste = [];
+  tableau = [[], [], [], [], [], [], []];
+  foundations = [[], [], [], []];
+  history = [];
+  
+  score = 0;
+  moves = 0;
+  seconds = 0;
+  gameActive = true;
+  
+  document.getElementById('victory-screen').classList.remove('active');
+}
+
+/* =========================
+   BARAJA Y REPARTO MEJORADOS
+========================= */
+
+function createDeck() {
+  deck = [];
+  SUITS.forEach(suit => {
+    VALUES.forEach((value, i) => {
+      deck.push({
+        suit,
+        value,
+        rank: i + 1,
+        color: (suit === "♥" || suit === "♦") ? "red" : "black",
+        faceUp: false,
+        id: `${value}${suit}${Date.now()}${Math.random()}`
+      });
+    });
+  });
+}
+
+function shuffleDeck(deck) {
+  // Algoritmo de Fisher-Yates mejorado
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  
+  // Verificar que el juego no sea imposible
+  if (config.difficulty === 'easy') {
+    ensureWinnableDeck();
+  }
+}
+
+function ensureWinnableDeck() {
+  // Algoritmo simple para mejorar probabilidad de ganar
+  let acesOnTop = 0;
+  tableau.forEach(column => {
+    if (column.length > 0 && column[column.length-1].value === 'A') {
+      acesOnTop++;
+    }
+  });
+  
+  if (acesOnTop < 2) {
+    // Reorganizar para tener al menos 2 ases accesibles
+    for (let i = 0; i < deck.length; i++) {
+      if (deck[i].value === 'A') {
+        for (let j = 0; j < 7; j++) {
+          if (tableau[j].length > 0 && tableau[j][tableau[j].length-1].value !== 'A') {
+            const ace = deck.splice(i, 1)[0];
+            tableau[j].push(ace);
+            ace.faceUp = true;
+            return;
+          }
+        }
+      }
+    }
+  }
+}
+
+function dealCards() {
+  let index = 0;
+  
+  // Repartir con animaciones
+  for (let col = 0; col < 7; col++) {
+    for (let row = 0; row <= col; row++) {
+      const card = deck[index++];
+      if (row === col) {
+        card.faceUp = true;
+      }
+      tableau[col].push(card);
+      
+      if (config.animations) {
+        setTimeout(() => playSound("flip"), row * 50 + col * 100);
+      }
+    }
+  }
+  
+  stock = deck.slice(index);
+  
+  if (config.animations) {
+    setTimeout(() => updateAll(), 1000);
+  }
+}
+
+/* =========================
+   RENDERIZADO MEJORADO
+========================= */
+
+function render() {
+  renderStock();
+  renderWaste();
+  renderTableau();
+  renderFoundations();
+  updateCardsLeft();
+  updateProgress();
+}
+
+function renderStock() {
+  const stockEl = document.getElementById("stock");
+  stockEl.innerHTML = "";
+  stockEl.onclick = drawFromStock;
+  
+  if (stock.length > 0) {
+    const cardCount = document.createElement("div");
+    cardCount.textContent = stock.length;
+    cardCount.style.position = "absolute";
+    cardCount.style.bottom = "5px";
+    cardCount.style.right = "5px";
+    cardCount.style.background = "rgba(0,0,0,0.7)";
+    cardCount.style.padding = "2px 6px";
+    cardCount.style.borderRadius = "10px";
+    cardCount.style.fontSize = "12px";
+    
+    const card = document.createElement("div");
+    card.className = "card back";
+    card.appendChild(cardCount);
+    stockEl.appendChild(card);
+    
+    // Efecto de stock lleno
+    if (stock.length > 20) {
+      stockEl.classList.add("highlight");
+    } else {
+      stockEl.classList.remove("highlight");
+    }
+  }
+}
+
+function renderWaste() {
+  const wasteEl = document.getElementById("waste");
+  wasteEl.innerHTML = "";
+  
+  if (waste.length > 0) {
+    const topCards = config.threeCardMode ? waste.slice(-3) : [waste[waste.length - 1]];
+    
+    topCards.forEach((card, i) => {
+      const el = createCardElement(card, "waste", waste.length - 1 - i);
+      el.style.transform = `translateX(${i * 15}px)`;
+      wasteEl.appendChild(el);
+    });
+  }
+}
+
+function renderFoundations() {
+  foundations.forEach((f, i) => {
+    const el = document.getElementById(`foundation-${i}`);
+    el.innerHTML = "";
+    
+    if (f.length > 0) {
+      const card = f[f.length - 1];
+      const cardEl = createCardElement(card, "foundation", i);
+      
+      // Efecto especial para cartas altas
+      if (card.value === 'A' || card.value === 'K' || card.value === 'Q' || card.value === 'J') {
+        cardEl.classList.add(card.value.toLowerCase());
+      }
+      
+      el.appendChild(cardEl);
+      
+      // Mostrar conteo de cartas
+      const count = document.createElement("div");
+      count.textContent = f.length;
+      count.style.position = "absolute";
+      count.style.top = "5px";
+      count.style.left = "5px";
+      count.style.background = "rgba(0,0,0,0.7)";
+      count.style.padding = "2px 6px";
+      count.style.borderRadius = "10px";
+      count.style.fontSize = "12px";
+      el.appendChild(count);
+    }
+  });
+}
+
+function renderTableau() {
+  document.querySelectorAll(".column").forEach((col, colIndex) => {
+    col.innerHTML = "";
+    const column = tableau[colIndex];
+    
+    column.forEach((card, cardIndex) => {
+      const el = createCardElement(card, "tableau", colIndex, cardIndex);
+      el.style.top = `${cardIndex * 25}px`;
+      el.style.zIndex = cardIndex;
+      
+      // Resaltar cartas movibles
+      if (card.faceUp && isCardMovable(card, colIndex, cardIndex)) {
+        el.classList.add("autoplace-highlight");
+      }
+      
+      col.appendChild(el);
+    });
+  });
+}
+
+function createCardElement(card, area, col, index) {
+  const el = document.createElement("div");
+  el.className = `card ${card.color}`;
+  el.dataset.id = card.id;
+  el.dataset.area = area;
+  el.dataset.col = col;
+  el.dataset.index = index;
+  
+  if (!card.faceUp) {
+    el.classList.add("back");
+  } else {
+    el.innerHTML = `<div style="font-size: 24px;">${card.value}${card.suit}</div>`;
+    
+    // Añadir eventos para drag & drop
+    el.onmousedown = (e) => startDrag(e, area, col, index);
+    el.ondblclick = () => smartAutoMove(area, col, index);
+    el.oncontextmenu = (e) => {
+      e.preventDefault();
+      quickMoveToFoundation(area, col, index);
+    };
+  }
+  
+  return el;
+}
+
+/* =========================
+   DRAG & DROP MEJORADO
+========================= */
 
 let draggedCards = [];
 let dragOrigin = null;
 let isDragging = false;
-
-/* =========================
-   EXTENDER createCardElement
-========================= */
-
-const oldCreateCardElement = createCardElement;
-createCardElement = function(card, area, col, index) {
-  const el = oldCreateCardElement(card, area, col, index);
-
-  if (card.faceUp) {
-    el.onmousedown = (e) => startDrag(e, area, col, index);
-    el.ondblclick = () => smartAutoMove(area, col, index);
-  }
-
-  return el;
-};
-
-/* =========================
-   START DRAG
-========================= */
+let dragOffset = { x: 0, y: 0 };
 
 function startDrag(e, area, col, index) {
-  if (area !== "tableau" && area !== "waste") return;
-
+  if (!gameActive || (area !== "tableau" && area !== "waste")) return;
+  
+  e.preventDefault();
   isDragging = true;
   draggedCards = [];
-
+  dragOffset = { x: e.clientX, y: e.clientY };
+  
   if (area === "tableau") {
     draggedCards = tableau[col].slice(index);
     dragOrigin = { area, col, index };
@@ -259,484 +818,1357 @@ function startDrag(e, area, col, index) {
     draggedCards = [waste[waste.length - 1]];
     dragOrigin = { area };
   }
-
-  draggedCards.forEach(c => c._dragging = true);
-
+  
+  // Crear elementos de arrastre
+  createDragElements();
+  
   document.addEventListener("mousemove", onDragMove);
   document.addEventListener("mouseup", endDrag);
+  document.addEventListener("touchmove", onDragMove);
+  document.addEventListener("touchend", endDrag);
 }
 
-/* =========================
-   DRAG MOVE
-========================= */
-
-function onDragMove(e) {
-  if (!isDragging) return;
-
-  document.querySelectorAll(".card").forEach(c => {
-    if (c.innerText === draggedCards[0].value + draggedCards[0].suit) {
-      c.classList.add("dragging");
-      c.style.left = e.pageX - 35 + "px";
-      c.style.top = e.pageY - 50 + "px";
-    }
+function createDragElements() {
+  draggedCards.forEach((card, i) => {
+    const el = document.createElement("div");
+    el.className = "card dragging";
+    el.style.position = "fixed";
+    el.style.left = (dragOffset.x - 40) + "px";
+    el.style.top = (dragOffset.y - 56 + i * 15) + "px";
+    el.style.zIndex = 10000;
+    el.innerHTML = card.faceUp ? `<div style="font-size: 24px;">${card.value}${card.suit}</div>` : "";
+    el.style.color = card.color === "red" ? "#c0392b" : "#111";
+    el.id = `drag-${i}`;
+    document.body.appendChild(el);
   });
 }
 
-/* =========================
-   END DRAG
-========================= */
+function onDragMove(e) {
+  if (!isDragging) return;
+  
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  
+  if (!clientX || !clientY) return;
+  
+  draggedCards.forEach((card, i) => {
+    const el = document.getElementById(`drag-${i}`);
+    if (el) {
+      el.style.left = (clientX - 40) + "px";
+      el.style.top = (clientY - 56 + i * 15) + "px";
+    }
+  });
+  
+  // Resaltar zonas de drop válidas
+  highlightValidDropZones();
+}
 
 function endDrag(e) {
   if (!isDragging) return;
-
-  const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+  
+  const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
+  const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
+  
   let dropped = false;
-
+  const dropTarget = document.elementFromPoint(clientX, clientY);
+  
   if (dropTarget) {
     const colEl = dropTarget.closest(".column");
     const foundationEl = dropTarget.closest(".slot");
-
+    const tableauEl = dropTarget.closest(".tableau");
+    
     if (colEl) {
       const colIndex = parseInt(colEl.dataset.col);
       dropped = tryDropTableau(colIndex);
     } else if (foundationEl && foundationEl.id.includes("foundation")) {
       const i = parseInt(foundationEl.id.split("-")[1]);
       dropped = tryDropFoundation(i);
+    } else if (tableauEl) {
+      // Dropping on empty tableau area - find nearest column
+      const rect = tableauEl.getBoundingClientRect();
+      const colWidth = 80;
+      const colIndex = Math.floor((clientX - rect.left) / colWidth);
+      if (colIndex >= 0 && colIndex < 7) {
+        dropped = tryDropTableau(colIndex);
+      }
     }
   }
-
+  
   cleanupDrag();
-
+  
   if (dropped) {
+    saveState();
     moves++;
-    updateHUD();
-    render();
+    score += calculateMoveScore(draggedCards.length);
+    playSound("move");
+    
+    // Verificar movimiento automático
+    setTimeout(() => checkAutoMoves(), 300);
+    
+    updateAll();
+    checkAchievements();
   }
-
+  
   isDragging = false;
 }
-
-/* =========================
-   CLEANUP
-========================= */
 
 function cleanupDrag() {
   document.removeEventListener("mousemove", onDragMove);
   document.removeEventListener("mouseup", endDrag);
-  document.querySelectorAll(".card").forEach(c => {
-    c.classList.remove("dragging");
-    c.style.left = "";
-    c.style.top = "";
+  document.removeEventListener("touchmove", onDragMove);
+  document.removeEventListener("touchend", endDrag);
+  
+  // Eliminar elementos de arrastre
+  for (let i = 0; i < draggedCards.length; i++) {
+    const el = document.getElementById(`drag-${i}`);
+    if (el) el.remove();
+  }
+  
+  // Limpiar resaltados
+  clearHighlights();
+}
+
+function highlightValidDropZones() {
+  clearHighlights();
+  
+  const card = draggedCards[0];
+  
+  // Resaltar columnas válidas
+  for (let col = 0; col < 7; col++) {
+    const target = tableau[col];
+    const colEl = document.querySelector(`.column[data-col="${col}"]`);
+    
+    let isValid = false;
+    if (target.length === 0) {
+      isValid = card.rank === 13; // Solo reyes en columnas vacías
+    } else {
+      const top = target[target.length - 1];
+      isValid = top.faceUp && top.color !== card.color && top.rank === card.rank + 1;
+    }
+    
+    if (isValid) {
+      colEl.style.border = "2px solid #2ecc71";
+      colEl.style.borderRadius = "8px";
+      colEl.style.padding = "2px";
+    }
+  }
+  
+  // Resaltar foundations válidas
+  for (let i = 0; i < 4; i++) {
+    if (draggedCards.length === 1 && canMoveToFoundation(card, foundations[i])) {
+      const foundationEl = document.getElementById(`foundation-${i}`);
+      foundationEl.classList.add("highlight");
+    }
+  }
+}
+
+function clearHighlights() {
+  document.querySelectorAll(".column").forEach(col => {
+    col.style.border = "";
+    col.style.borderRadius = "";
+    col.style.padding = "";
   });
-  draggedCards.forEach(c => delete c._dragging);
+  
+  document.querySelectorAll(".slot").forEach(slot => {
+    slot.classList.remove("highlight");
+  });
 }
 
 /* =========================
-   DROP VALIDATIONS
+   MECÁNICAS DE JUEGO MEJORADAS
 ========================= */
 
-function tryDropTableau(targetCol) {
-  const target = tableau[targetCol];
-  const card = draggedCards[0];
-
-  if (target.length === 0) {
-    if (card.rank === 13) {
-      moveDraggedToTableau(targetCol);
-      return true;
-    }
-  } else {
-    const top = target[target.length - 1];
-    if (top.faceUp &&
-        top.color !== card.color &&
-        top.rank === card.rank + 1) {
-      moveDraggedToTableau(targetCol);
-      return true;
-    }
-  }
-  return false;
-}
-
-function tryDropFoundation(i) {
-  if (draggedCards.length > 1) return false;
-  const card = draggedCards[0];
-  if (canMoveToFoundation(card, foundations[i])) {
-    saveState();
-    removeDraggedFromOrigin();
-    foundations[i].push(card);
-    score += 10;
-    return true;
-  }
-  return false;
-}
-
-/* =========================
-   MOVE HANDLER
-========================= */
-
-function moveDraggedToTableau(targetCol) {
+function drawFromStock() {
+  if (!gameActive) return;
+  
   saveState();
-  removeDraggedFromOrigin();
-  draggedCards.forEach(c => tableau[targetCol].push(c));
-  revealLast(dragOrigin.col);
-}
-
-function removeDraggedFromOrigin() {
-  if (dragOrigin.area === "tableau") {
-    tableau[dragOrigin.col].splice(dragOrigin.index);
-  } else if (dragOrigin.area === "waste") {
-    waste.pop();
+  
+  if (stock.length === 0) {
+    if (waste.length === 0) return;
+    
+    // Reciclar waste con penalización
+    stock = waste.reverse();
+    waste = [];
+    stock.forEach(c => {
+      c.faceUp = false;
+      c.recycled = (c.recycled || 0) + 1;
+    });
+    
+    score = Math.max(0, score - 20); // Penalización por reciclar
+    showToast("¡Waste reciclado! -20 puntos", "warning");
+  } else {
+    const drawCount = config.threeCardMode ? 3 : 1;
+    for (let i = 0; i < drawCount && stock.length > 0; i++) {
+      const card = stock.pop();
+      card.faceUp = true;
+      waste.push(card);
+    }
   }
+  
+  moves++;
+  playSound("flip");
+  updateAll();
 }
-
-/* =========================
-   SMART AUTO MOVE (DOUBLE CLICK)
-========================= */
 
 function smartAutoMove(area, col, index) {
+  if (!gameActive) return;
+  
   if (area === "tableau") {
     const card = tableau[col][index];
     if (!card.faceUp) return;
+    
+    // Intentar mover a foundation
     for (let i = 0; i < 4; i++) {
       if (canMoveToFoundation(card, foundations[i])) {
-        saveState();
-        foundations[i].push(tableau[col].pop());
-        revealLast(col);
-        score += 10;
-        moves++;
-        render();
+        performAutoMove(col, i, "tableau");
+        return;
+      }
+    }
+    
+    // Intentar mover a otra columna
+    for (let targetCol = 0; targetCol < 7; targetCol++) {
+      if (targetCol === col) continue;
+      if (canMoveToTableau(col, index, targetCol)) {
+        performTableauMove(col, index, targetCol);
+        return;
+      }
+    }
+  } else if (area === "waste") {
+    const card = waste[waste.length - 1];
+    for (let i = 0; i < 4; i++) {
+      if (canMoveToFoundation(card, foundations[i])) {
+        performAutoMove(-1, i, "waste");
         return;
       }
     }
   }
 }
 
+function quickMoveToFoundation(area, col, index) {
+  if (!gameActive) return;
+  
+  let card;
+  if (area === "tableau") {
+    card = tableau[col][index];
+    if (!card.faceUp || index !== tableau[col].length - 1) return;
+  } else if (area === "waste") {
+    card = waste[waste.length - 1];
+  } else {
+    return;
+  }
+  
+  for (let i = 0; i < 4; i++) {
+    if (canMoveToFoundation(card, foundations[i])) {
+      performAutoMove(col, i, area);
+      break;
+    }
+  }
+}
+
+function performAutoMove(fromCol, toFoundation, fromArea) {
+  saveState();
+  let card;
+  
+  if (fromArea === "tableau") {
+    card = tableau[fromCol].pop();
+    revealLast(fromCol);
+  } else if (fromArea === "waste") {
+    card = waste.pop();
+  }
+  
+  if (card) {
+    foundations[toFoundation].push(card);
+    moves++;
+    score += 15; // Bonus por movimiento automático
+    playSound("success");
+    
+    showToast(`+15 puntos! ${card.value}${card.suit} movida`, "success");
+    updateAll();
+  }
+}
+
+function performTableauMove(fromCol, fromIndex, toCol) {
+  saveState();
+  const cardsToMove = tableau[fromCol].slice(fromIndex);
+  tableau[fromCol].splice(fromIndex);
+  tableau[toCol].push(...cardsToMove);
+  revealLast(fromCol);
+  
+  moves++;
+  score += calculateMoveScore(cardsToMove.length);
+  playSound("move");
+  updateAll();
+}
+
 /* =========================
-   HINT SYSTEM
+   SISTEMA DE HINTS INTELIGENTE
 ========================= */
 
+let hintTimeout = null;
+let currentHint = null;
+
 function showHint() {
+  if (!gameActive) return;
+  
   clearHints();
-
-  // Tableau → Foundation
-  for (let i = 0; i < 7; i++) {
-    const col = tableau[i];
-    if (col.length === 0) continue;
-    const card = col[col.length - 1];
+  
+  // Prioridad 1: Mover a foundation
+  for (let col = 0; col < 7; col++) {
+    const column = tableau[col];
+    if (column.length === 0) continue;
+    const card = column[column.length - 1];
     if (!card.faceUp) continue;
-
+    
     for (let f = 0; f < 4; f++) {
       if (canMoveToFoundation(card, foundations[f])) {
-        highlightCard(card);
-        highlightSlot(f);
+        currentHint = { type: 'foundation', col, foundation: f, card };
+        showCardHint(card);
+        showFoundationHint(f);
         return;
       }
     }
   }
-
-  // Waste → Foundation
+  
+  // Prioridad 2: Mover desde waste a foundation
   if (waste.length > 0) {
     const card = waste[waste.length - 1];
     for (let f = 0; f < 4; f++) {
       if (canMoveToFoundation(card, foundations[f])) {
-        highlightCard(card);
-        highlightSlot(f);
+        currentHint = { type: 'waste-foundation', foundation: f, card };
+        showCardHint(card);
+        showFoundationHint(f);
         return;
       }
     }
   }
+  
+  // Prioridad 3: Mover entre columnas para liberar cartas
+  for (let fromCol = 0; fromCol < 7; fromCol++) {
+    for (let cardIndex = tableau[fromCol].length - 1; cardIndex >= 0; cardIndex--) {
+      const card = tableau[fromCol][cardIndex];
+      if (!card.faceUp) continue;
+      
+      for (let toCol = 0; toCol < 7; toCol++) {
+        if (fromCol === toCol) continue;
+        
+        if (canMoveToTableau(fromCol, cardIndex, toCol)) {
+          currentHint = { type: 'tableau', fromCol, toCol, cardIndex, card };
+          showCardHint(card);
+          showTableauHint(toCol);
+          return;
+        }
+      }
+    }
+  }
+  
+  // Prioridad 4: Sacar del stock
+  if (stock.length > 0) {
+    showToast("Intenta sacar cartas del stock", "info");
+    document.getElementById("stock").classList.add("glow");
+    currentHint = { type: 'stock' };
+  } else {
+    showToast("No hay movimientos disponibles", "warning");
+  }
 }
 
-function highlightCard(card) {
+function clearHints() {
+  document.querySelectorAll(".glow").forEach(el => el.classList.remove("glow"));
+  if (hintTimeout) clearTimeout(hintTimeout);
+  currentHint = null;
+}
+
+function showCardHint(card) {
   document.querySelectorAll(".card").forEach(el => {
-    if (el.innerText === card.value + card.suit) {
+    if (el.innerText.includes(card.value) && el.innerText.includes(card.suit)) {
       el.classList.add("glow");
     }
   });
 }
 
-function highlightSlot(i) {
-  const slot = document.getElementById(`foundation-${i}`);
+function showFoundationHint(f) {
+  const slot = document.getElementById(`foundation-${f}`);
   slot.classList.add("glow");
 }
 
-function clearHints() {
-  document.querySelectorAll(".glow").forEach(el => el.classList.remove("glow"));
-}
-</script>
-
-
-<!-- =========================
-     ULTRA – PARTE 3 VA AQUÍ
-     Sonido
-     Música
-     Panel opciones
-     Temas
-     Fondos
-========================= -->
-
-
-<script>
-/* ==================================================
-   SISTEMA DE SONIDO Y MÚSICA
-================================================== */
-
-let soundEnabled = true;
-let musicEnabled = true;
-
-const sndMove = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-slide-1538.mp3");
-const sndWin = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3");
-const bgMusic = new Audio("https://assets.mixkit.co/music/preview/mixkit-game-level-music-689.mp3");
-
-bgMusic.loop = true;
-bgMusic.volume = 0.4;
-
-function toggleSound() {
-  soundEnabled = !soundEnabled;
-  alert(soundEnabled ? "🔊 Sonido activado" : "🔇 Sonido desactivado");
+function showTableauHint(col) {
+  const column = document.querySelector(`.column[data-col="${col}"]`);
+  column.style.border = "2px solid #f39c12";
+  column.style.borderRadius = "8px";
 }
 
-function toggleMusic() {
-  musicEnabled = !musicEnabled;
-  if (musicEnabled) {
-    bgMusic.play();
-  } else {
-    bgMusic.pause();
+/* =========================
+   AUTO-COMPLETE INTELIGENTE
+========================= */
+
+function autoComplete() {
+  if (!gameActive) return;
+  
+  let movesMade = 0;
+  let maxMoves = 100; // Límite de seguridad
+  
+  const autoMove = () => {
+    if (movesMade >= maxMoves || !gameActive) {
+      showToast(`Auto-completado: ${movesMade} movimientos realizados`, "info");
+      updateAll();
+      return;
+    }
+    
+    let moved = false;
+    
+    // Buscar movimientos a foundation
+    for (let col = 0; col < 7; col++) {
+      const column = tableau[col];
+      if (column.length === 0) continue;
+      const card = column[column.length - 1];
+      if (!card.faceUp) continue;
+      
+      for (let f = 0; f < 4; f++) {
+        if (canMoveToFoundation(card, foundations[f])) {
+          saveState();
+          foundations[f].push(column.pop());
+          revealLast(col);
+          moves++;
+          movesMade++;
+          score += 10;
+          moved = true;
+          
+          setTimeout(autoMove, config.autoMoveDelay);
+          return;
+        }
+      }
+    }
+    
+    // Buscar movimientos desde waste
+    if (waste.length > 0) {
+      const card = waste[waste.length - 1];
+      for (let f = 0; f < 4; f++) {
+        if (canMoveToFoundation(card, foundations[f])) {
+          saveState();
+          foundations[f].push(waste.pop());
+          moves++;
+          movesMade++;
+          score += 10;
+          moved = true;
+          
+          setTimeout(autoMove, config.autoMoveDelay);
+          return;
+        }
+      }
+    }
+    
+    // Si no hay movimientos, terminar
+    if (!moved) {
+      showToast(`Auto-completado: ${movesMade} movimientos realizados`, "info");
+      updateAll();
+    }
+  };
+  
+  showToast("Iniciando auto-completado...", "info");
+  autoMove();
+}
+
+/* =========================
+   SISTEMA DE PUNTUACIÓN MEJORADO
+========================= */
+
+function calculateMoveScore(cardsMoved) {
+  let baseScore = 5;
+  let multiplier = 1;
+  
+  // Bonus por múltiples cartas
+  if (cardsMoved > 1) {
+    multiplier += cardsMoved * 0.5;
+  }
+  
+  // Bonus por cartas especiales
+  const topCard = draggedCards[0];
+  if (topCard) {
+    if (topCard.value === 'A') multiplier += 2;
+    if (topCard.value === 'K') multiplier += 1.5;
+    if (topCard.rank >= 10) multiplier += 0.5;
+  }
+  
+  // Penalización por reciclaje
+  if (topCard && topCard.recycled) {
+    multiplier *= Math.max(0.5, 1 - (topCard.recycled * 0.2));
+  }
+  
+  return Math.round(baseScore * multiplier);
+}
+
+function updateScore() {
+  let foundationScore = 0;
+  foundations.forEach(f => {
+    f.forEach(card => {
+      foundationScore += VALUE_POINTS[card.value] || 5;
+    });
+  });
+  
+  // Bonus por velocidad
+  let timeBonus = 0;
+  if (seconds < 300) { // Menos de 5 minutos
+    timeBonus = Math.max(0, 500 - seconds);
+  }
+  
+  // Bonus por eficiencia
+  let efficiencyBonus = 0;
+  if (moves > 0) {
+    const cardsInFoundations = foundations.reduce((a, f) => a + f.length, 0);
+    const efficiency = cardsInFoundations / moves;
+    efficiencyBonus = Math.round(efficiency * 100);
+  }
+  
+  score = foundationScore + timeBonus + efficiencyBonus;
+  document.getElementById("score").textContent = score;
+}
+
+/* =========================
+   SISTEMA DE LOGROS MEJORADO
+========================= */
+
+function checkAchievements() {
+  // Primer movimiento
+  if (!achievements.firstMove.unlocked && moves >= 1) {
+    unlockAchievement("firstMove");
+  }
+  
+  // Movimientos rápidos
+  if (!achievements.speedDemon.unlocked && stats.bestTime > 0 && stats.bestTime < 180) {
+    unlockAchievement("speedDemon");
+  }
+  
+  // Juego perfecto
+  if (!achievements.perfectGame.unlocked && stats.gamesWon > 0) {
+    const gameStats = loadCurrentGameStats();
+    if (gameStats && gameStats.undosUsed === 0) {
+      unlockAchievement("perfectGame");
+    }
+  }
+  
+  // Maestro de cartas
+  if (!achievements.cardMaster.unlocked && stats.totalMoves >= 1000) {
+    unlockAchievement("cardMaster");
+  }
+  
+  // Sin hints
+  if (!achievements.noHint.unlocked && stats.gamesWon > 0) {
+    const gameStats = loadCurrentGameStats();
+    if (gameStats && gameStats.hintsUsed === 0) {
+      unlockAchievement("noHint");
+    }
   }
 }
 
-function playMoveSound() {
-  if (!soundEnabled) return;
-  sndMove.currentTime = 0;
-  sndMove.play();
+function unlockAchievement(achievementKey) {
+  const achievement = achievements[achievementKey];
+  if (!achievement || achievement.unlocked) return;
+  
+  achievement.unlocked = true;
+  score += 100; // Bonus por logro
+  
+  // Mostrar notificación
+  showAchievementNotification(achievement);
+  
+  // Guardar logros
+  saveAchievements();
+  
+  playSound("success");
 }
 
-function playWinSound() {
-  if (!soundEnabled) return;
-  sndWin.play();
-}
-
-/* ==================================================
-   PANEL DE OPCIONES
-================================================== */
-
-function openOptions() {
-  let panel = document.getElementById("options-panel");
-  if (panel) return;
-
-  panel = document.createElement("div");
-  panel.id = "options-panel";
-  panel.style.position = "fixed";
-  panel.style.top = "50%";
-  panel.style.left = "50%";
-  panel.style.transform = "translate(-50%, -50%)";
-  panel.style.background = "rgba(0,0,0,0.85)";
-  panel.style.padding = "20px";
-  panel.style.borderRadius = "12px";
-  panel.style.zIndex = "9999";
-  panel.style.boxShadow = "0 0 30px rgba(0,0,0,0.8)";
-  panel.style.color = "#fff";
-
-  panel.innerHTML = `
-    <h3>⚙️ Opciones</h3>
-    <button onclick="toggleTheme()">Cambiar tema</button><br><br>
-    <button onclick="toggleMusic()">Música ON/OFF</button><br><br>
-    <button onclick="changeBackground()">Cambiar fondo</button><br><br>
-    <button onclick="changeCardStyle()">Cambiar cartas</button><br><br>
-    <button onclick="closeOptions()">Cerrar</button>
+function showAchievementNotification(achievement) {
+  const notification = document.createElement("div");
+  notification.className = "achievement-notification success";
+  notification.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <i class="fas fa-trophy" style="font-size: 24px; color: #f39c12;"></i>
+      <div>
+        <strong style="color: #f39c12;">🏆 Logro Desbloqueado!</strong><br>
+        <strong>${achievement.name}</strong><br>
+        <small>${achievement.desc}</small>
+      </div>
+    </div>
   `;
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.opacity = "0";
+    notification.style.transform = "translateX(100%)";
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
 
+/* =========================
+   SISTEMA DE ESTADÍSTICAS
+========================= */
+
+function showStats() {
+  const panel = document.createElement("div");
+  panel.className = "stats-panel";
+  
+  const winRate = stats.gamesPlayed > 0 ? ((stats.gamesWon / stats.gamesPlayed) * 100).toFixed(1) : "0";
+  const avgTime = stats.gamesWon > 0 ? Math.round(stats.totalTime / stats.gamesWon) : 0;
+  const avgMoves = stats.gamesWon > 0 ? Math.round(stats.totalMoves / stats.gamesWon) : 0;
+  
+  panel.innerHTML = `
+    <h2 style="margin-top: 0; color: #1abc9c;"><i class="fas fa-chart-bar"></i> Estadísticas</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+        <small>Juegos Jugados</small>
+        <div style="font-size: 24px; font-weight: bold;">${stats.gamesPlayed}</div>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+        <small>Juegos Ganados</small>
+        <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">${stats.gamesWon}</div>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+        <small>Tasa de Victoria</small>
+        <div style="font-size: 24px; font-weight: bold;">${winRate}%</div>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+        <small>Mejor Tiempo</small>
+        <div style="font-size: 24px; font-weight: bold;">${formatTime(stats.bestTime)}</div>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+        <small>Mejor Puntuación</small>
+        <div style="font-size: 24px; font-weight: bold; color: #f39c12;">${stats.bestScore}</div>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+        <small>Racha Actual</small>
+        <div style="font-size: 24px; font-weight: bold;">${stats.streak} 🔥</div>
+      </div>
+    </div>
+    
+    <h3><i class="fas fa-trophy"></i> Logros (${Object.values(achievements).filter(a => a.unlocked).length}/${Object.keys(achievements).length})</h3>
+    <div style="max-height: 200px; overflow-y: auto; margin: 10px 0;">
+      ${Object.values(achievements).map(a => `
+        <div style="display: flex; align-items: center; padding: 8px; background: ${a.unlocked ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255,255,255,0.05)'}; 
+             margin: 5px 0; border-radius: 6px; border-left: 3px solid ${a.unlocked ? '#2ecc71' : '#7f8c8d'}">
+          ${a.unlocked ? '<i class="fas fa-check-circle" style="color: #2ecc71; margin-right: 10px;"></i>' : 
+            '<i class="far fa-circle" style="color: #7f8c8d; margin-right: 10px;"></i>'}
+          <div>
+            <div><strong>${a.name}</strong></div>
+            <small style="opacity: 0.8;">${a.desc}</small>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button onclick="resetStats()" class="danger" style="flex: 1;"><i class="fas fa-trash"></i> Resetear Stats</button>
+      <button onclick="panel.remove()" style="flex: 1;"><i class="fas fa-times"></i> Cerrar</button>
+    </div>
+  `;
+  
   document.body.appendChild(panel);
 }
 
-function closeOptions() {
-  const panel = document.getElementById("options-panel");
-  if (panel) panel.remove();
+function resetStats() {
+  if (!confirm("¿Estás seguro de querer resetear todas las estadísticas? Esto no se puede deshacer.")) return;
+  
+  stats = {
+    gamesPlayed: 0,
+    gamesWon: 0,
+    totalTime: 0,
+    totalMoves: 0,
+    bestTime: Infinity,
+    bestScore: 0,
+    streak: 0,
+    maxStreak: 0
+  };
+  
+  Object.values(achievements).forEach(a => a.unlocked = false);
+  
+  saveStats();
+  saveAchievements();
+  
+  showToast("Estadísticas reseteadas", "info");
+  document.querySelector('.stats-panel').remove();
 }
 
-/* ==================================================
-   TEMAS Y FONDOS
-================================================== */
+/* =========================
+   SISTEMA DE VICTORIA MEJORADO
+========================= */
 
-let bgIndex = 0;
-const backgrounds = [
-  "radial-gradient(circle at top, #157a3d, #022b14)",
-  "radial-gradient(circle at top, #1e3c72, #2a5298)",
-  "radial-gradient(circle at top, #232526, #414345)",
-  "radial-gradient(circle at top, #42275a, #734b6d)"
-];
-
-function changeBackground() {
-  bgIndex = (bgIndex + 1) % backgrounds.length;
-  document.body.style.background = backgrounds[bgIndex];
-}
-
-/* ==================================================
-   DISEÑO DE CARTAS
-================================================== */
-
-let cardStyleIndex = 0;
-const cardStyles = [
-  { bg: "linear-gradient(145deg, #fff, #ddd)" },
-  { bg: "linear-gradient(145deg, #fefcea, #f1da36)" },
-  { bg: "linear-gradient(145deg, #ece9e6, #ffffff)" },
-  { bg: "linear-gradient(145deg, #c9d6ff, #e2e2e2)" }
-];
-
-function changeCardStyle() {
-  cardStyleIndex = (cardStyleIndex + 1) % cardStyles.length;
-  document.querySelectorAll(".card:not(.back)").forEach(card => {
-    card.style.background = cardStyles[cardStyleIndex].bg;
-  });
-}
-
-/* ==================================================
-   AUTO INICIAR MÚSICA AL PRIMER CLICK
-================================================== */
-
-document.addEventListener("click", () => {
-  if (musicEnabled && bgMusic.paused) {
-    bgMusic.play();
+function checkWin() {
+  const totalCards = foundations.reduce((a, f) => a + f.length, 0);
+  if (totalCards === 52 && gameActive) {
+    gameActive = false;
+    clearInterval(timerInterval);
+    
+    // Actualizar estadísticas
+    stats.gamesPlayed++;
+    stats.gamesWon++;
+    stats.totalTime += seconds;
+    stats.totalMoves += moves;
+    stats.streak++;
+    
+    if (seconds < stats.bestTime) stats.bestTime = seconds;
+    if (score > stats.bestScore) stats.bestScore = score;
+    if (stats.streak > stats.maxStreak) stats.maxStreak = stats.streak;
+    
+    // Desbloquear logros
+    if (!achievements.firstWin.unlocked) unlockAchievement("firstWin");
+    if (stats.streak >= 5 && !achievements.streak5.unlocked) unlockAchievement("streak5");
+    if (seconds < 180 && !achievements.speedDemon.unlocked) unlockAchievement("speedDemon");
+    
+    // Mostrar pantalla de victoria
+    showVictoryScreen();
+    
+    playSound("win");
+    launchEnhancedConfetti();
+    
+    saveStats();
+    saveGame();
   }
-}, { once: true });
+  
+  return totalCards === 52;
+}
 
+function showVictoryScreen() {
+  document.getElementById('victory-time').textContent = formatTime(seconds);
+  document.getElementById('victory-moves').textContent = moves;
+  document.getElementById('victory-score').textContent = score;
+  document.getElementById('victory-screen').classList.add('active');
+}
+
+function shareVictory() {
+  const text = `¡Gané al Solitario Klondike ULTRA! 🎉\nTiempo: ${formatTime(seconds)}\nMovimientos: ${moves}\nPuntuación: ${score}\n\n¡Juega tú también en este increíble juego!`;
+  
+  if (navigator.share) {
+    navigator.share({
+      title: 'Victoria en Solitario ULTRA',
+      text: text,
+      url: window.location.href
+    }).catch(() => {
+      navigator.clipboard.writeText(text);
+      showToast("Texto copiado al portapapeles!", "success");
+    });
+  } else {
+    navigator.clipboard.writeText(text);
+    showToast("Texto copiado al portapapeles!", "success");
+  }
+}
+
+/* =========================
+   UTILIDADES MEJORADAS
+========================= */
+
+function updateAll() {
+  updateHUD();
+  render();
+  updateScore();
+  updateProgress();
+  checkWin();
+}
+
+function updateHUD() {
+  document.getElementById("score").textContent = score;
+  document.getElementById("moves").textContent = moves;
+  document.getElementById("timer").textContent = formatTime(seconds);
+}
+
+function updateCardsLeft() {
+  const foundationCards = foundations.reduce((a, f) => a + f.length, 0);
+  document.getElementById("cards-left").textContent = 52 - foundationCards;
+}
+
+function updateProgress() {
+  const foundationCards = foundations.reduce((a, f) => a + f.length, 0);
+  const progress = (foundationCards / 52) * 100;
+  document.getElementById("progress-fill").style.width = `${progress}%`;
+}
+
+function formatTime(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    seconds++;
+    updateHUD();
+    
+    // Logro de maratón
+    if (seconds >= 3600 && !achievements.marathon.unlocked) {
+      unlockAchievement("marathon");
+    }
+  }, 1000);
+}
+
+function showToast(message, type = "info") {
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = message;
+  toast.style.background = type === "success" ? "rgba(46, 204, 113, 0.9)" : 
+                          type === "warning" ? "rgba(243, 156, 18, 0.9)" : 
+                          type === "error" ? "rgba(231, 76, 60, 0.9)" : 
+                          "rgba(52, 152, 219, 0.9)";
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translate(-50%, 20px)";
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+function launchEnhancedConfetti() {
+  const colors = ['#1abc9c', '#2ecc71', '#3498db', '#9b59b6', '#f39c12', '#e74c3c'];
+  
+  for (let i = 0; i < 200; i++) {
+    setTimeout(() => {
+      const confetti = document.createElement("div");
+      confetti.style.position = "fixed";
+      confetti.style.width = Math.random() * 10 + 5 + "px";
+      confetti.style.height = Math.random() * 10 + 5 + "px";
+      confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+      confetti.style.left = Math.random() * 100 + "%";
+      confetti.style.top = "-20px";
+      confetti.style.borderRadius = Math.random() > 0.5 ? "50%" : "0";
+      confetti.style.opacity = "0.9";
+      confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+      confetti.style.zIndex = "99998";
+      
+      document.body.appendChild(confetti);
+      
+      const animation = confetti.animate([
+        { transform: `translate(0, 0) rotate(0deg)`, opacity: 1 },
+        { transform: `translate(${Math.random() * 100 - 50}px, 110vh) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+      ], {
+        duration: Math.random() * 3000 + 2000,
+        easing: "cubic-bezier(0.1, 0.8, 0.3, 1)"
+      });
+      
+      animation.onfinish = () => confetti.remove();
+    }, i * 20);
+  }
+}
+
+/* =========================
+   FUNCIONES DE VALIDACIÓN MEJORADAS
+========================= */
+
+function canMoveToTableau(fromCol, fromIndex, toCol) {
+  if (fromCol === toCol) return false;
+  
+  const movingCards = tableau[fromCol].slice(fromIndex);
+  if (movingCards.length === 0) return false;
+  
+  const firstCard = movingCards[0];
+  const targetColumn = tableau[toCol];
+  
+  if (targetColumn.length === 0) {
+    return firstCard.rank === 13; // Solo reyes en columnas vacías
+  }
+  
+  const lastCard = targetColumn[targetColumn.length - 1];
+  return lastCard.faceUp && 
+         lastCard.color !== firstCard.color && 
+         lastCard.rank === firstCard.rank + 1;
+}
+
+function canMoveToFoundation(card, foundation) {
+  if (foundation.length === 0) {
+    return card.rank === 1; // Solo ases
+  }
+  
+  const topCard = foundation[foundation.length - 1];
+  return topCard.suit === card.suit && 
+         card.rank === topCard.rank + 1;
+}
+
+function isCardMovable(card, col, index) {
+  if (!card.faceUp) return false;
+  
+  // Verificar si puede ir a foundation
+  for (let f = 0; f < 4; f++) {
+    if (canMoveToFoundation(card, foundations[f])) {
+      return true;
+    }
+  }
+  
+  // Verificar si puede mover a otra columna
+  if (index === tableau[col].length - 1) {
+    for (let targetCol = 0; targetCol < 7; targetCol++) {
+      if (targetCol !== col && canMoveToTableau(col, index, targetCol)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+function checkAutoMoves() {
+  // Verificar si hay movimientos automáticos disponibles
+  for (let col = 0; col < 7; col++) {
+    const column = tableau[col];
+    if (column.length === 0) continue;
+    const card = column[column.length - 1];
+    if (!card.faceUp) continue;
+    
+    for (let f = 0; f < 4; f++) {
+      if (canMoveToFoundation(card, foundations[f])) {
+        showToast(`Movimiento automático disponible!`, "info");
+        return;
+      }
+    }
+  }
+}
+
+/* =========================
+   SISTEMA DE GUARDADO MEJORADO
+========================= */
+
+function saveGame() {
+  if (!config.autoSave) return;
+  
+  const gameData = {
+    tableau: tableau.map(col => col.map(card => ({
+      suit: card.suit,
+      value: card.value,
+      rank: card.rank,
+      color: card.color,
+      faceUp: card.faceUp,
+      id: card.id,
+      recycled: card.recycled || 0
+    }))),
+    foundations: foundations.map(f => f.map(card => ({
+      suit: card.suit,
+      value: card.value,
+      rank: card.rank,
+      color: card.color,
+      faceUp: card.faceUp,
+      id: card.id
+    }))),
+    stock: stock.map(card => ({
+      suit: card.suit,
+      value: card.value,
+      rank: card.rank,
+      color: card.color,
+      faceUp: card.faceUp,
+      id: card.id,
+      recycled: card.recycled || 0
+    })),
+    waste: waste.map(card => ({
+      suit: card.suit,
+      value: card.value,
+      rank: card.rank,
+      color: card.color,
+      faceUp: card.faceUp,
+      id: card.id,
+      recycled: card.recycled || 0
+    })),
+    score,
+    moves,
+    seconds,
+    history: history.slice(-10), // Guardar solo últimos 10 estados
+    timestamp: Date.now()
+  };
+  
+  localStorage.setItem("solitarioUltraSave", JSON.stringify(gameData));
+  localStorage.setItem("solitarioUltraConfig", JSON.stringify(config));
+}
+
+function loadGame() {
+  try {
+    const savedGame = localStorage.getItem("solitarioUltraSave");
+    const savedConfig = localStorage.getItem("solitarioUltraConfig");
+    const savedStats = localStorage.getItem("solitarioUltraStats");
+    const savedAchievements = localStorage.getItem("solitarioUltraAchievements");
+    
+    if (savedConfig) {
+      config = { ...config, ...JSON.parse(savedConfig) };
+    }
+    
+    if (savedStats) {
+      stats = JSON.parse(savedStats);
+    }
+    
+    if (savedAchievements) {
+      const loaded = JSON.parse(savedAchievements);
+      Object.keys(loaded).forEach(key => {
+        if (achievements[key]) {
+          achievements[key].unlocked = loaded[key];
+        }
+      });
+    }
+    
+    if (savedGame) {
+      const gameData = JSON.parse(savedGame);
+      
+      // Verificar si el juego guardado es reciente (menos de 24 horas)
+      const age = Date.now() - (gameData.timestamp || 0);
+      if (age > 24 * 60 * 60 * 1000) {
+        if (confirm("Tienes un juego guardado antiguo. ¿Quieres continuarlo?")) {
+          restoreGame(gameData);
+        } else {
+          newGame();
+        }
+      } else {
+        if (confirm("¿Continuar juego guardado?")) {
+          restoreGame(gameData);
+        } else {
+          newGame();
+        }
+      }
+    } else {
+      newGame();
+    }
+  } catch (error) {
+    console.error("Error cargando juego:", error);
+    newGame();
+  }
+}
+
+function restoreGame(gameData) {
+  tableau = gameData.tableau;
+  foundations = gameData.foundations;
+  stock = gameData.stock;
+  waste = gameData.waste;
+  score = gameData.score;
+  moves = gameData.moves;
+  seconds = gameData.seconds;
+  history = gameData.history || [];
+  
+  startTimer();
+  updateAll();
+  showToast("Juego cargado correctamente", "success");
+}
+
+function saveStats() {
+  localStorage.setItem("solitarioUltraStats", JSON.stringify(stats));
+}
+
+function saveAchievements() {
+  const achievementsData = {};
+  Object.keys(achievements).forEach(key => {
+    achievementsData[key] = achievements[key].unlocked;
+  });
+  localStorage.setItem("solitarioUltraAchievements", JSON.stringify(achievementsData));
+}
+
+function loadCurrentGameStats() {
+  return {
+    undosUsed: 0, // Implementar seguimiento
+    hintsUsed: 0, // Implementar seguimiento
+    timestamp: Date.now()
+  };
+}
+
+/* =========================
+   CONFIGURACIÓN Y SETTINGS
+========================= */
+
+function showSettings() {
+  const panel = document.createElement("div");
+  panel.className = "stats-panel";
+  panel.innerHTML = `
+    <h2 style="margin-top: 0; color: #1abc9c;"><i class="fas fa-cog"></i> Configuración</h2>
+    
+    <div style="margin: 20px 0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <span><i class="fas fa-volume-up"></i> Sonido</span>
+        <label class="switch">
+          <input type="checkbox" ${config.soundEnabled ? 'checked' : ''} onchange="config.soundEnabled = this.checked; saveGame();">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <span><i class="fas fa-music"></i> Música</span>
+        <label class="switch">
+          <input type="checkbox" ${config.musicEnabled ? 'checked' : ''} onchange="config.musicEnabled = this.checked; saveGame(); toggleMusic();">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <span><i class="fas fa-film"></i> Animaciones</span>
+        <label class="switch">
+          <input type="checkbox" ${config.animations ? 'checked' : ''} onchange="config.animations = this.checked; saveGame();">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <span><i class="fas fa-save"></i> Auto-guardado</span>
+        <label class="switch">
+          <input type="checkbox" ${config.autoSave ? 'checked' : ''} onchange="config.autoSave = this.checked; saveGame();">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <div style="margin-bottom: 8px;"><i class="fas fa-chess-king"></i> Dificultad</div>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="config.difficulty='easy'; saveGame(); showToast('Dificultad: Fácil', 'info')" 
+                  ${config.difficulty === 'easy' ? 'class="success"' : ''} style="flex: 1;">Fácil</button>
+          <button onclick="config.difficulty='normal'; saveGame(); showToast('Dificultad: Normal', 'info')" 
+                  ${config.difficulty === 'normal' ? 'class="success"' : ''} style="flex: 1;">Normal</button>
+          <button onclick="config.difficulty='hard'; saveGame(); showToast('Dificultad: Difícil', 'info')" 
+                  ${config.difficulty === 'hard' ? 'class="success"' : ''} style="flex: 1;">Difícil</button>
+        </div>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <span><i class="fas fa-layer-group"></i> Modo 3 cartas</span>
+        <label class="switch">
+          <input type="checkbox" ${config.threeCardMode ? 'checked' : ''} onchange="config.threeCardMode = this.checked; saveGame(); newGame();">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    
+    <div style="margin: 20px 0;">
+      <button onclick="exportGame()" class="secondary" style="width: 100%; margin-bottom: 10px;">
+        <i class="fas fa-download"></i> Exportar Juego
+      </button>
+      <button onclick="importGame()" class="secondary" style="width: 100%; margin-bottom: 10px;">
+        <i class="fas fa-upload"></i> Importar Juego
+      </button>
+      <button onclick="document.getElementById('keyboard-shortcuts').style.display='block'" style="width: 100%; margin-bottom: 10px;">
+        <i class="fas fa-keyboard"></i> Atajos de Teclado
+      </button>
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
+      <button onclick="panel.remove()" style="flex: 1;"><i class="fas fa-times"></i> Cerrar</button>
+      <button onclick="resetSettings()" class="danger" style="flex: 1;"><i class="fas fa-undo"></i> Resetear</button>
+    </div>
+  `;
+  
+  document.body.appendChild(panel);
+}
+
+function toggleTheme() {
+  document.body.classList.toggle("dark");
+  showToast("Tema cambiado", "info");
+}
+
+function toggleSound() {
+  config.soundEnabled = !config.soundEnabled;
+  showToast(config.soundEnabled ? "Sonido activado" : "Sonido desactivado", "info");
+  saveGame();
+}
+
+function toggleMusic() {
+  config.musicEnabled = !config.musicEnabled;
+  if (config.musicEnabled) {
+    bgMusic.play().catch(() => {});
+    showToast("Música activada", "info");
+  } else {
+    bgMusic.pause();
+    showToast("Música desactivada", "info");
+  }
+  saveGame();
+}
+
+/* =========================
+   UNDO MEJORADO
+========================= */
+
+function undoMove() {
+  if (history.length === 0) {
+    showToast("No hay movimientos para deshacer", "warning");
+    return;
+  }
+  
+  const prevState = history.pop();
+  tableau = prevState.tableau;
+  foundations = prevState.foundations;
+  stock = prevState.stock;
+  waste = prevState.waste;
+  score = prevState.score;
+  moves = prevState.moves;
+  
+  updateAll();
+  showToast("Movimiento deshecho", "info");
+}
+
+/* =========================
+   INICIALIZACIÓN
+========================= */
+
+// Estilos para el switch
+const style = document.createElement('style');
+style.textContent = `
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #1abc9c;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+`;
+document.head.appendChild(style);
+
+// Atajos de teclado
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  
+  switch(e.key.toLowerCase()) {
+    case 'n':
+      if (e.ctrlKey) newGame();
+      break;
+    case 'z':
+      if (e.ctrlKey) undoMove();
+      break;
+    case 'h':
+      showHint();
+      break;
+    case 'a':
+      autoComplete();
+      break;
+    case 'd':
+      drawFromStock();
+      break;
+    case 'escape':
+      document.querySelectorAll('.stats-panel, #options-panel').forEach(panel => panel.remove());
+      break;
+  }
+});
+
+// Inicializar música de fondo
+const bgMusic = new Audio("https://assets.mixkit.co/music/preview/mixkit-game-level-music-689.mp3");
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
+
+// Cargar juego al inicio
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loader').remove();
+    loadGame();
+    
+    // Iniciar música en primer interacción
+    document.addEventListener('click', () => {
+      if (config.musicEnabled && bgMusic.paused) {
+        bgMusic.play().catch(() => {});
+      }
+    }, { once: true });
+  }, 1500);
+});
+
+// Auto-guardar cada 30 segundos
+setInterval(() => {
+  if (config.autoSave && gameActive) {
+    saveGame();
+  }
+}, 30000);
 </script>
 
-
-<!-- =========================
-     ULTRA – PARTE 4 VA AQUÍ
-     PWA
-     Offline
-     Splash
-     Pulido final
-========================= -->
-
-
-<!-- ===============================
-     PANTALLA DE CARGA
-================================= -->
-<style>
-#loader {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle, #0f2027, #203a43, #2c5364);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 99999;
-  color: white;
-  font-size: 2em;
-  flex-direction: column;
-}
-
-#loader span {
-  font-size: 0.5em;
-  opacity: 0.7;
-}
-</style>
-
+<!-- Pantalla de carga -->
 <div id="loader">
-  🂡 Cargando Solitario ULTRA...
-  <span>Modo Pro Activado</span>
+  <div style="text-align: center;">
+    <div style="font-size: 48px; margin-bottom: 20px;">🂡</div>
+    <div style="font-size: 2em; margin-bottom: 10px;">Solitario ULTRA</div>
+    <div style="opacity: 0.7; font-size: 0.8em;">Cargando experiencia premium...</div>
+    <div style="margin-top: 20px; width: 200px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
+      <div id="loader-bar" style="height: 100%; background: #1abc9c; width: 0%; transition: width 0.3s;"></div>
+    </div>
+  </div>
 </div>
 
 <script>
-window.addEventListener("load", () => {
-  setTimeout(() => {
-    const loader = document.getElementById("loader");
-    if (loader) loader.remove();
-  }, 1200);
+// Animación de carga
+window.addEventListener('load', () => {
+  const loaderBar = document.getElementById('loader-bar');
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += Math.random() * 20;
+    loaderBar.style.width = `${Math.min(progress, 100)}%`;
+    if (progress >= 100) clearInterval(interval);
+  }, 100);
 });
 </script>
 
-<!-- ===============================
-     GUARDADO AUTOMÁTICO
-================================= -->
-<script>
-function saveGameState() {
-  const state = {
-    time: gameTime,
-    moves: moveCount,
-    bg: bgIndex,
-    cardStyle: cardStyleIndex
-  };
-  localStorage.setItem("solitarioUltraState", JSON.stringify(state));
-}
-
-function loadGameState() {
-  const state = localStorage.getItem("solitarioUltraState");
-  if (!state) return;
-
-  const data = JSON.parse(state);
-  gameTime = data.time || 0;
-  moveCount = data.moves || 0;
-  bgIndex = data.bg || 0;
-  cardStyleIndex = data.cardStyle || 0;
-
-  document.body.style.background = backgrounds[bgIndex];
-  changeCardStyle();
-}
-
-setInterval(saveGameState, 5000);
-window.addEventListener("load", loadGameState);
-</script>
-
-<!-- ===============================
-     MODO PANTALLA COMPLETA
-================================= -->
-<script>
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-}
-</script>
-
-<!-- ===============================
-     REGISTRO SERVICE WORKER (PWA)
-================================= -->
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js")
-    .then(() => console.log("PWA lista"))
-    .catch(err => console.error("Error SW", err));
-}
-</script>
-
-<!-- ===============================
-     BOTÓNES EXTRA
-================================= -->
-<script>
-const extraControls = document.createElement("div");
-extraControls.style.position = "fixed";
-extraControls.style.bottom = "15px";
-extraControls.style.right = "15px";
-extraControls.style.display = "flex";
-extraControls.style.gap = "10px";
-extraControls.style.zIndex = "9999";
-
-extraControls.innerHTML = `
-  <button onclick="openOptions()">⚙️</button>
-  <button onclick="toggleFullscreen()">🖥️</button>
-`;
-
-document.body.appendChild(extraControls);
-</script>
-
-<!-- ===============================
-     EFECTOS FINALES
-================================= -->
-<style>
-.card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-}
-</style>
+<!-- Atajos de teclado -->
+<div id="keyboard-shortcuts" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); padding: 30px; border-radius: 15px; z-index: 10000; min-width: 300px; border: 2px solid #3498db;">
+  <h3 style="margin-top: 0; color: #3498db;"><i class="fas fa-keyboard"></i> Atajos de Teclado</h3>
+  <div style="margin: 20px 0;">
+    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+      <span><kbd>Ctrl</kbd> + <kbd>N</kbd></span>
+      <span>Nuevo juego</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+      <span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span>
+      <span>Deshacer movimiento</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+      <span><kbd>H</kbd></span>
+      <span>Mostrar hint</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+      <span><kbd>A</kbd></span>
+      <span>Auto-completar</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+      <span><kbd>D</kbd></span>
+      <span>Sacar carta del stock</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+      <span><kbd>Esc</kbd></span>
+      <span>Cerrar ventanas</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+      <span>Doble clic</span>
+      <span>Mover automáticamente</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+      <span>Clic derecho</span>
+      <span>Mover rápido a foundation</span>
+    </div>
+  </div>
+  <button onclick="document.getElementById('keyboard-shortcuts').style.display='none'" style="width: 100%;">
+    <i class="fas fa-times"></i> Cerrar
+  </button>
+</div>
 
 </body>
 </html>
