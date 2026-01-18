@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Solitario Klondike ULTRA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg-main: radial-gradient(circle at top, #157a3d, #022b14);
+  --panel: rgba(0,0,0,0.6);
+  --card-bg: #ffffff;
+  --card-red: #c0392b;
+  --card-black: #111;
+  --glow: 0 0 15px rgba(0,255,180,0.3);
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-main);
+  color: white;
+  user-select: none;
+  overflow-x: hidden;
+}
+
+body.dark {
+  background: radial-gradient(circle at top, #222, #000);
+}
+
+#hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 25px rgba(0,0,0,0.6);
+  z-index: 10;
+}
+
+#hud .group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.hud-item {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+button {
+  background: linear-gradient(135deg, #1abc9c, #16a085);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #000;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+#game {
+  padding: 18px;
+}
+
+.top-area {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 25px;
+}
+
+.stock-area, .foundation-area {
+  display: flex;
+  gap: 14px;
+}
+
+.slot {
+  width: 78px;
+  height: 110px;
+  border-radius: 12px;
+  border: 2px dashed rgba(255,255,255,0.25);
+  position: relative;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+}
+
+.tableau {
+  display: flex;
+  gap: 14px;
+}
+
+.column {
+  width: 78px;
+  min-height: 130px;
+  position: relative;
+}
+
+.card {
+  width: 78px;
+  height: 110px;
+  background: linear-gradient(145deg, #fff, #ddd);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 15px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  position: absolute;
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  perspective: 800px;
+}
+
+.card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.5);
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.card.red { color: var(--card-red); }
+.card.black { color: var(--card-black); }
+
+.card.back {
+  background: linear-gradient(135deg, #2980b9, #3498db);
+  color: transparent;
+}
+
+.dragging {
+  opacity: 0.8;
+  transform: scale(1.05) rotate(2deg);
+  z-index: 9999;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+}
+
+.glow {
+  box-shadow: 0 0 25px rgba(0,255,180,0.8);
+}
+
+@media (max-width: 768px) {
+  .card, .slot {
+    width: 60px;
+    height: 85px;
+  }
+  .column {
+    width: 60px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="hud">
+  <div class="group">
+    <button onclick="newGame()">Nuevo</button>
+    <button onclick="undoMove()">Undo</button>
+    <button onclick="autoComplete()">Auto</button>
+    <button onclick="showHint()">Hint</button>
+  </div>
+
+  <div class="group">
+    <div class="hud-item">⏱ <span id="timer">00:00</span></div>
+    <div class="hud-item">🎯 <span id="score">0</span></div>
+    <div class="hud-item">🔁 <span id="moves">0</span></div>
+  </div>
+
+  <div class="group">
+    <button onclick="toggleTheme()">🌙</button>
+    <button onclick="toggleSound()">🔊</button>
+  </div>
+</div>
+
+<div id="game">
+  <div class="top-area">
+    <div class="stock-area">
+      <div id="stock" class="slot"></div>
+      <div id="waste" class="slot"></div>
+    </div>
+
+    <div class="foundation-area">
+      <div id="foundation-0" class="slot"></div>
+      <div id="foundation-1" class="slot"></div>
+      <div id="foundation-2" class="slot"></div>
+      <div id="foundation-3" class="slot"></div>
+    </div>
+  </div>
+
+  <div class="tableau">
+    <div class="column" data-col="0"></div>
+    <div class="column" data-col="1"></div>
+    <div class="column" data-col="2"></div>
+    <div class="column" data-col="3"></div>
+    <div class="column" data-col="4"></div>
+    <div class="column" data-col="5"></div>
+    <div class="column" data-col="6"></div>
+  </div>
+</div>
+
+<!-- =========================
+     ULTRA – PARTE 2 VA AQUÍ
+     Drag & Drop real
+     Movimiento múltiple
+     Snap
+     Validaciones
+     Hint system
+========================= -->
+
+<script>
+/* ==================================================
+   ULTRA DRAG & DROP SYSTEM
+================================================== */
+
+let draggedCards = [];
+let dragOrigin = null;
+let isDragging = false;
+
+/* =========================
+   EXTENDER createCardElement
+========================= */
+
+const oldCreateCardElement = createCardElement;
+createCardElement = function(card, area, col, index) {
+  const el = oldCreateCardElement(card, area, col, index);
+
+  if (card.faceUp) {
+    el.onmousedown = (e) => startDrag(e, area, col, index);
+    el.ondblclick = () => smartAutoMove(area, col, index);
+  }
+
+  return el;
+};
+
+/* =========================
+   START DRAG
+========================= */
+
+function startDrag(e, area, col, index) {
+  if (area !== "tableau" && area !== "waste") return;
+
+  isDragging = true;
+  draggedCards = [];
+
+  if (area === "tableau") {
+    draggedCards = tableau[col].slice(index);
+    dragOrigin = { area, col, index };
+  } else if (area === "waste") {
+    draggedCards = [waste[waste.length - 1]];
+    dragOrigin = { area };
+  }
+
+  draggedCards.forEach(c => c._dragging = true);
+
+  document.addEventListener("mousemove", onDragMove);
+  document.addEventListener("mouseup", endDrag);
+}
+
+/* =========================
+   DRAG MOVE
+========================= */
+
+function onDragMove(e) {
+  if (!isDragging) return;
+
+  document.querySelectorAll(".card").forEach(c => {
+    if (c.innerText === draggedCards[0].value + draggedCards[0].suit) {
+      c.classList.add("dragging");
+      c.style.left = e.pageX - 35 + "px";
+      c.style.top = e.pageY - 50 + "px";
+    }
+  });
+}
+
+/* =========================
+   END DRAG
+========================= */
+
+function endDrag(e) {
+  if (!isDragging) return;
+
+  const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+  let dropped = false;
+
+  if (dropTarget) {
+    const colEl = dropTarget.closest(".column");
+    const foundationEl = dropTarget.closest(".slot");
+
+    if (colEl) {
+      const colIndex = parseInt(colEl.dataset.col);
+      dropped = tryDropTableau(colIndex);
+    } else if (foundationEl && foundationEl.id.includes("foundation")) {
+      const i = parseInt(foundationEl.id.split("-")[1]);
+      dropped = tryDropFoundation(i);
+    }
+  }
+
+  cleanupDrag();
+
+  if (dropped) {
+    moves++;
+    updateHUD();
+    render();
+  }
+
+  isDragging = false;
+}
+
+/* =========================
+   CLEANUP
+========================= */
+
+function cleanupDrag() {
+  document.removeEventListener("mousemove", onDragMove);
+  document.removeEventListener("mouseup", endDrag);
+  document.querySelectorAll(".card").forEach(c => {
+    c.classList.remove("dragging");
+    c.style.left = "";
+    c.style.top = "";
+  });
+  draggedCards.forEach(c => delete c._dragging);
+}
+
+/* =========================
+   DROP VALIDATIONS
+========================= */
+
+function tryDropTableau(targetCol) {
+  const target = tableau[targetCol];
+  const card = draggedCards[0];
+
+  if (target.length === 0) {
+    if (card.rank === 13) {
+      moveDraggedToTableau(targetCol);
+      return true;
+    }
+  } else {
+    const top = target[target.length - 1];
+    if (top.faceUp &&
+        top.color !== card.color &&
+        top.rank === card.rank + 1) {
+      moveDraggedToTableau(targetCol);
+      return true;
+    }
+  }
+  return false;
+}
+
+function tryDropFoundation(i) {
+  if (draggedCards.length > 1) return false;
+  const card = draggedCards[0];
+  if (canMoveToFoundation(card, foundations[i])) {
+    saveState();
+    removeDraggedFromOrigin();
+    foundations[i].push(card);
+    score += 10;
+    return true;
+  }
+  return false;
+}
+
+/* =========================
+   MOVE HANDLER
+========================= */
+
+function moveDraggedToTableau(targetCol) {
+  saveState();
+  removeDraggedFromOrigin();
+  draggedCards.forEach(c => tableau[targetCol].push(c));
+  revealLast(dragOrigin.col);
+}
+
+function removeDraggedFromOrigin() {
+  if (dragOrigin.area === "tableau") {
+    tableau[dragOrigin.col].splice(dragOrigin.index);
+  } else if (dragOrigin.area === "waste") {
+    waste.pop();
+  }
+}
+
+/* =========================
+   SMART AUTO MOVE (DOUBLE CLICK)
+========================= */
+
+function smartAutoMove(area, col, index) {
+  if (area === "tableau") {
+    const card = tableau[col][index];
+    if (!card.faceUp) return;
+    for (let i = 0; i < 4; i++) {
+      if (canMoveToFoundation(card, foundations[i])) {
+        saveState();
+        foundations[i].push(tableau[col].pop());
+        revealLast(col);
+        score += 10;
+        moves++;
+        render();
+        return;
+      }
+    }
+  }
+}
+
+/* =========================
+   HINT SYSTEM
+========================= */
+
+function showHint() {
+  clearHints();
+
+  // Tableau → Foundation
+  for (let i = 0; i < 7; i++) {
+    const col = tableau[i];
+    if (col.length === 0) continue;
+    const card = col[col.length - 1];
+    if (!card.faceUp) continue;
+
+    for (let f = 0; f < 4; f++) {
+      if (canMoveToFoundation(card, foundations[f])) {
+        highlightCard(card);
+        highlightSlot(f);
+        return;
+      }
+    }
+  }
+
+  // Waste → Foundation
+  if (waste.length > 0) {
+    const card = waste[waste.length - 1];
+    for (let f = 0; f < 4; f++) {
+      if (canMoveToFoundation(card, foundations[f])) {
+        highlightCard(card);
+        highlightSlot(f);
+        return;
+      }
+    }
+  }
+}
+
+function highlightCard(card) {
+  document.querySelectorAll(".card").forEach(el => {
+    if (el.innerText === card.value + card.suit) {
+      el.classList.add("glow");
+    }
+  });
+}
+
+function highlightSlot(i) {
+  const slot = document.getElementById(`foundation-${i}`);
+  slot.classList.add("glow");
+}
+
+function clearHints() {
+  document.querySelectorAll(".glow").forEach(el => el.classList.remove("glow"));
+}
+</script>
+
+
+<!-- =========================
+     ULTRA – PARTE 3 VA AQUÍ
+     Sonido
+     Música
+     Panel opciones
+     Temas
+     Fondos
+========================= -->
+
+
+<script>
+/* ==================================================
+   SISTEMA DE SONIDO Y MÚSICA
+================================================== */
+
+let soundEnabled = true;
+let musicEnabled = true;
+
+const sndMove = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-slide-1538.mp3");
+const sndWin = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3");
+const bgMusic = new Audio("https://assets.mixkit.co/music/preview/mixkit-game-level-music-689.mp3");
+
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  alert(soundEnabled ? "🔊 Sonido activado" : "🔇 Sonido desactivado");
+}
+
+function toggleMusic() {
+  musicEnabled = !musicEnabled;
+  if (musicEnabled) {
+    bgMusic.play();
+  } else {
+    bgMusic.pause();
+  }
+}
+
+function playMoveSound() {
+  if (!soundEnabled) return;
+  sndMove.currentTime = 0;
+  sndMove.play();
+}
+
+function playWinSound() {
+  if (!soundEnabled) return;
+  sndWin.play();
+}
+
+/* ==================================================
+   PANEL DE OPCIONES
+================================================== */
+
+function openOptions() {
+  let panel = document.getElementById("options-panel");
+  if (panel) return;
+
+  panel = document.createElement("div");
+  panel.id = "options-panel";
+  panel.style.position = "fixed";
+  panel.style.top = "50%";
+  panel.style.left = "50%";
+  panel.style.transform = "translate(-50%, -50%)";
+  panel.style.background = "rgba(0,0,0,0.85)";
+  panel.style.padding = "20px";
+  panel.style.borderRadius = "12px";
+  panel.style.zIndex = "9999";
+  panel.style.boxShadow = "0 0 30px rgba(0,0,0,0.8)";
+  panel.style.color = "#fff";
+
+  panel.innerHTML = `
+    <h3>⚙️ Opciones</h3>
+    <button onclick="toggleTheme()">Cambiar tema</button><br><br>
+    <button onclick="toggleMusic()">Música ON/OFF</button><br><br>
+    <button onclick="changeBackground()">Cambiar fondo</button><br><br>
+    <button onclick="changeCardStyle()">Cambiar cartas</button><br><br>
+    <button onclick="closeOptions()">Cerrar</button>
+  `;
+
+  document.body.appendChild(panel);
+}
+
+function closeOptions() {
+  const panel = document.getElementById("options-panel");
+  if (panel) panel.remove();
+}
+
+/* ==================================================
+   TEMAS Y FONDOS
+================================================== */
+
+let bgIndex = 0;
+const backgrounds = [
+  "radial-gradient(circle at top, #157a3d, #022b14)",
+  "radial-gradient(circle at top, #1e3c72, #2a5298)",
+  "radial-gradient(circle at top, #232526, #414345)",
+  "radial-gradient(circle at top, #42275a, #734b6d)"
+];
+
+function changeBackground() {
+  bgIndex = (bgIndex + 1) % backgrounds.length;
+  document.body.style.background = backgrounds[bgIndex];
+}
+
+/* ==================================================
+   DISEÑO DE CARTAS
+================================================== */
+
+let cardStyleIndex = 0;
+const cardStyles = [
+  { bg: "linear-gradient(145deg, #fff, #ddd)" },
+  { bg: "linear-gradient(145deg, #fefcea, #f1da36)" },
+  { bg: "linear-gradient(145deg, #ece9e6, #ffffff)" },
+  { bg: "linear-gradient(145deg, #c9d6ff, #e2e2e2)" }
+];
+
+function changeCardStyle() {
+  cardStyleIndex = (cardStyleIndex + 1) % cardStyles.length;
+  document.querySelectorAll(".card:not(.back)").forEach(card => {
+    card.style.background = cardStyles[cardStyleIndex].bg;
+  });
+}
+
+/* ==================================================
+   AUTO INICIAR MÚSICA AL PRIMER CLICK
+================================================== */
+
+document.addEventListener("click", () => {
+  if (musicEnabled && bgMusic.paused) {
+    bgMusic.play();
+  }
+}, { once: true });
+
+</script>
+
+
+<!-- =========================
+     ULTRA – PARTE 4 VA AQUÍ
+     PWA
+     Offline
+     Splash
+     Pulido final
+========================= -->
+
+
+<!-- ===============================
+     PANTALLA DE CARGA
+================================= -->
+<style>
+#loader {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle, #0f2027, #203a43, #2c5364);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  color: white;
+  font-size: 2em;
+  flex-direction: column;
+}
+
+#loader span {
+  font-size: 0.5em;
+  opacity: 0.7;
+}
+</style>
+
+<div id="loader">
+  🂡 Cargando Solitario ULTRA...
+  <span>Modo Pro Activado</span>
+</div>
+
+<script>
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    const loader = document.getElementById("loader");
+    if (loader) loader.remove();
+  }, 1200);
+});
+</script>
+
+<!-- ===============================
+     GUARDADO AUTOMÁTICO
+================================= -->
+<script>
+function saveGameState() {
+  const state = {
+    time: gameTime,
+    moves: moveCount,
+    bg: bgIndex,
+    cardStyle: cardStyleIndex
+  };
+  localStorage.setItem("solitarioUltraState", JSON.stringify(state));
+}
+
+function loadGameState() {
+  const state = localStorage.getItem("solitarioUltraState");
+  if (!state) return;
+
+  const data = JSON.parse(state);
+  gameTime = data.time || 0;
+  moveCount = data.moves || 0;
+  bgIndex = data.bg || 0;
+  cardStyleIndex = data.cardStyle || 0;
+
+  document.body.style.background = backgrounds[bgIndex];
+  changeCardStyle();
+}
+
+setInterval(saveGameState, 5000);
+window.addEventListener("load", loadGameState);
+</script>
+
+<!-- ===============================
+     MODO PANTALLA COMPLETA
+================================= -->
+<script>
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+</script>
+
+<!-- ===============================
+     REGISTRO SERVICE WORKER (PWA)
+================================= -->
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js")
+    .then(() => console.log("PWA lista"))
+    .catch(err => console.error("Error SW", err));
+}
+</script>
+
+<!-- ===============================
+     BOTÓNES EXTRA
+================================= -->
+<script>
+const extraControls = document.createElement("div");
+extraControls.style.position = "fixed";
+extraControls.style.bottom = "15px";
+extraControls.style.right = "15px";
+extraControls.style.display = "flex";
+extraControls.style.gap = "10px";
+extraControls.style.zIndex = "9999";
+
+extraControls.innerHTML = `
+  <button onclick="openOptions()">⚙️</button>
+  <button onclick="toggleFullscreen()">🖥️</button>
+`;
+
+document.body.appendChild(extraControls);
+</script>
+
+<!-- ===============================
+     EFECTOS FINALES
+================================= -->
+<style>
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+</style>
+
+</body>
+</html>
