@@ -1,2174 +1,901 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Solitario Klondike ULTRA</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Solitario Klondike ULTRA Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-table: #004d26;
+            --bg-texture: radial-gradient(circle at 50% 30%, #006430, #003319);
+            --card-width: 85px;
+            --card-height: 120px;
+            --card-radius: 6px;
+            --spacing: 15px;
+            --gold-accent: #ffd700;
+            --ui-bg: rgba(0,0,0,0.8);
+        }
 
-<style>
-:root {
-  --bg-main: radial-gradient(circle at top, #157a3d, #022b14);
-  --panel: rgba(0,0,0,0.6);
-  --card-bg: #ffffff;
-  --card-red: #c0392b;
-  --card-black: #111;
-  --glow: 0 0 15px rgba(0,255,180,0.3);
-  --success: #2ecc71;
-  --warning: #f39c12;
-  --danger: #e74c3c;
-}
+        @media (max-width: 600px) {
+            :root {
+                --card-width: 13.5vw;
+                --card-height: 19vw;
+                --spacing: 2vw;
+            }
+        }
 
-body {
-  margin: 0;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: var(--bg-main);
-  color: white;
-  user-select: none;
-  overflow-x: hidden;
-  min-height: 100vh;
-}
+        * { box-sizing: border-box; touch-action: none; user-select: none; }
 
-body.dark {
-  background: radial-gradient(circle at top, #222, #000);
-}
+        body {
+            margin: 0;
+            background: var(--bg-table);
+            background-image: var(--bg-texture);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-#hud {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  background: var(--panel);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 25px rgba(0,0,0,0.6);
-  z-index: 10;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
+        /* --- HUD --- */
+        #hud {
+            padding: 0 15px;
+            height: 60px;
+            background: var(--ui-bg);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
 
-#hud .group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
+        .stats-group { display: flex; gap: 15px; }
+        .stat { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
+        .stat-label { font-size: 9px; text-transform: uppercase; opacity: 0.8; letter-spacing: 1px; color: #aaa; }
+        .stat-val { font-size: 16px; font-weight: bold; font-family: 'Roboto Mono', monospace; color: var(--gold-accent); }
 
-.hud-item {
-  font-size: 14px;
-  opacity: 0.9;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+        .controls { display: flex; gap: 8px; }
+        
+        button {
+            background: linear-gradient(to bottom, #3a3a3a, #222);
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #eee;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        button:hover { background: #444; transform: translateY(-1px); }
+        button:active { transform: translateY(1px); }
+        
+        .btn-green { background: linear-gradient(to bottom, #2ecc71, #27ae60); border-color: #27ae60; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .btn-green:hover { background: linear-gradient(to bottom, #2ecc71, #2ecc71); }
+        
+        .btn-blue { background: linear-gradient(to bottom, #3498db, #2980b9); border-color: #2980b9; }
 
-button {
-  background: linear-gradient(135deg, #1abc9c, #16a085);
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  cursor: pointer;
-  font-weight: bold;
-  color: #000;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-}
+        /* --- TOASTS --- */
+        .toast-container {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; gap: 10px; z-index: 2000; pointer-events: none;
+        }
+        .toast {
+            background: rgba(0,0,0,0.9);
+            color: white; padding: 10px 20px; border-radius: 20px;
+            border: 1px solid var(--gold-accent);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease-out;
+            font-size: 14px; display: flex; align-items: center; gap: 10px;
+        }
+        @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 
-button:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-}
+        /* --- GAME BOARD --- */
+        #game-board {
+            flex: 1; padding: 20px; max-width: 1000px; width: 100%; margin: 0 auto; position: relative;
+        }
 
-button:active {
-  transform: translateY(0);
-}
+        .row-top { display: flex; justify-content: space-between; height: var(--card-height); margin-bottom: 25px; }
+        .pile-group { display: flex; gap: var(--spacing); }
 
-button.secondary {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  color: white;
-}
+        .slot {
+            width: var(--card-width); height: var(--card-height); border-radius: var(--card-radius);
+            border: 2px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);
+            position: relative; display: flex; justify-content: center; align-items: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
 
-button.danger {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white;
-}
+        .slot.foundation::after { content: attr(data-icon); font-size: 40px; opacity: 0.1; font-family: serif; color: white; }
+        .slot.refresh-stock { border-color: #2ecc71; cursor: pointer; }
+        .slot.refresh-stock::before { content: '↺'; font-size: 30px; color: #2ecc71; }
 
-button.success {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-  color: white;
-}
+        /* --- CARDS --- */
+        .card {
+            width: var(--card-width); height: var(--card-height); border-radius: var(--card-radius);
+            background-color: #fff; position: absolute;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            z-index: 10; overflow: hidden;
+            transition: transform 0.1s;
+        }
 
-.progress-bar {
-  width: 100px;
-  height: 6px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 3px;
-  overflow: hidden;
-}
+        .card-back {
+            width: 100%; height: 100%; background: #fff; padding: 4px; display: none;
+        }
+        .back-pattern {
+            width: 100%; height: 100%; border-radius: 3px; background-color: #c0392b; /* Rojo clásico */
+            background-image: 
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 6px);
+        }
+        .card[data-face="down"] .card-back { display: block; }
+        .card[data-face="up"] .card-face { display: flex; }
+        .card[data-face="up"] { cursor: grab; }
 
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #1abc9c, #2ecc71);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
+        .card-face {
+            width: 100%; height: 100%; display: none; flex-direction: column; justify-content: space-between; padding: 3px;
+        }
 
-#game {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+        .card[data-color="red"] { color: #d40000; }
+        .card[data-color="black"] { color: #1a1a1a; }
 
-.top-area {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 30px;
-  gap: 20px;
-}
+        .corner { display: flex; flex-direction: column; align-items: center; width: 20px; line-height: 1; padding-top: 2px; }
+        .corner span:first-child { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: bold; letter-spacing: -1px; }
+        .corner span:last-child { font-size: 14px; margin-top: -2px; }
+        .corner.btm { align-self: flex-end; transform: rotate(180deg); }
 
-.stock-area, .foundation-area {
-  display: flex;
-  gap: 15px;
-}
+        .center-area {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 60%; height: 60%; display: flex; justify-content: center; align-items: center;
+        }
+        .pip-simple { font-size: 42px; line-height: 1; }
+        
+        .royal-box {
+            width: 100%; height: 100%; border: 1px solid var(--gold-accent);
+            display: flex; justify-content: center; align-items: center; position: relative;
+            background: linear-gradient(135deg, rgba(255,215,0,0.1), transparent);
+        }
+        .royal-letter { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: bold; z-index: 2; }
+        .royal-suit { position: absolute; font-size: 60px; opacity: 0.15; z-index: 1; }
 
-.slot {
-  width: 80px;
-  height: 112px;
-  border-radius: 12px;
-  border: 2px dashed rgba(255,255,255,0.25);
-  position: relative;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
-  transition: all 0.2s ease;
-}
+        .card.dragging { z-index: 9999 !important; box-shadow: 0 15px 30px rgba(0,0,0,0.6); pointer-events: none; transform: scale(1.05); }
 
-.slot.highlight {
-  border-color: #1abc9c;
-  background: rgba(26, 188, 156, 0.1);
-  box-shadow: 0 0 20px rgba(26, 188, 156, 0.3);
-}
+        /* Animación Pista */
+        .hint-highlight {
+            animation: pulseGold 1.5s infinite;
+            box-shadow: 0 0 15px var(--gold-accent) !important;
+            border: 2px solid var(--gold-accent);
+        }
+        .dest-highlight {
+            box-shadow: inset 0 0 20px var(--gold-accent) !important;
+            border-color: var(--gold-accent) !important;
+        }
+        @keyframes pulseGold {
+            0% { transform: scale(1); box-shadow: 0 0 0 rgba(255,215,0,0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255,215,0,1); }
+            100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,215,0,0); }
+        }
 
-.tableau {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-}
+        .tableau-col { position: relative; width: var(--card-width); min-height: 150px; }
 
-.column {
-  width: 80px;
-  min-height: 150px;
-  position: relative;
-}
+        /* --- MODALS --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            display: none; justify-content: center; align-items: center; z-index: 3000;
+        }
+        .modal {
+            background: #222; color: #fff; padding: 30px; border-radius: 12px;
+            text-align: center; border: 1px solid #444; max-width: 350px; width: 90%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+        }
+        .modal h2 { margin-top: 0; color: var(--gold-accent); }
+        
+        .setting-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 15px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px;
+        }
+        
+        /* Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555; transition: .4s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #2ecc71; }
+        input:checked + .slider:before { transform: translateX(26px); }
 
-.card {
-  width: 80px;
-  height: 112px;
-  background: linear-gradient(145deg, #fff, #ddd);
-  border-radius: 12px;
-  box-shadow:
-    0 8px 15px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  position: absolute;
-  cursor: grab;
-  transition: all 0.15s ease;
-  perspective: 800px;
-  font-size: 24px;
-}
-
-.card:hover {
-  transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 15px 30px rgba(0,0,0,0.5);
-  z-index: 100;
-}
-
-.card:active {
-  cursor: grabbing;
-}
-
-.card.red { color: var(--card-red); }
-.card.black { color: var(--card-black); }
-
-.card.back {
-  background: linear-gradient(135deg, #2980b9, #3498db);
-  color: transparent;
-  background-size: 200% 200%;
-  animation: shimmer 3s infinite;
-}
-
-.card.ace { background: linear-gradient(145deg, #ffeb3b, #ffc107); }
-.card.king { background: linear-gradient(145deg, #9b59b6, #8e44ad); }
-.card.queen { background: linear-gradient(145deg, #e74c3c, #c0392b); }
-.card.jack { background: linear-gradient(145deg, #3498db, #2980b9); }
-
-.dragging {
-  opacity: 0.9;
-  transform: scale(1.08) rotate(3deg);
-  z-index: 9999;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.8);
-  filter: brightness(1.1);
-}
-
-.glow {
-  box-shadow: 0 0 30px rgba(0,255,180,0.9), 0 8px 15px rgba(0,0,0,0.4);
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 30px rgba(0,255,180,0.9), 0 8px 15px rgba(0,0,0,0.4); }
-  50% { box-shadow: 0 0 45px rgba(0,255,180,1.2), 0 8px 15px rgba(0,0,0,0.4); }
-}
-
-@keyframes shimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes slideIn {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes celebrate {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-
-.achievement-notification {
-  position: fixed;
-  top: 80px;
-  right: 20px;
-  background: rgba(0,0,0,0.9);
-  border-left: 4px solid #f39c12;
-  padding: 15px;
-  border-radius: 8px;
-  z-index: 9999;
-  animation: slideIn 0.3s ease;
-  min-width: 250px;
-}
-
-.achievement-notification.success {
-  border-left-color: #2ecc71;
-}
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.9);
-  padding: 12px 24px;
-  border-radius: 8px;
-  z-index: 9999;
-  animation: slideIn 0.3s ease;
-}
-
-.stats-panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.95);
-  padding: 30px;
-  border-radius: 15px;
-  z-index: 10000;
-  min-width: 400px;
-  border: 2px solid #1abc9c;
-  backdrop-filter: blur(10px);
-}
-
-.controls-panel {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  gap: 10px;
-  z-index: 100;
-}
-
-#victory-screen {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.95);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 99999;
-  flex-direction: column;
-  text-align: center;
-}
-
-#victory-screen.active {
-  display: flex;
-  animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@media (max-width: 768px) {
-  .card, .slot {
-    width: 65px;
-    height: 91px;
-  }
-  
-  .column {
-    width: 65px;
-  }
-  
-  .tableau {
-    gap: 10px;
-  }
-  
-  .top-area {
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-  }
-  
-  .stock-area, .foundation-area {
-    gap: 10px;
-  }
-  
-  #hud {
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-  }
-  
-  #hud .group {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
-@media (max-width: 480px) {
-  .card, .slot {
-    width: 55px;
-    height: 77px;
-    font-size: 18px;
-  }
-  
-  .column {
-    width: 55px;
-  }
-}
-
-.card.selected {
-  outline: 3px solid #f39c12;
-  outline-offset: 2px;
-}
-
-.autoplace-highlight {
-  animation: autoplace 0.8s ease infinite;
-}
-
-@keyframes autoplace {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-
-.difficulty-badge {
-  background: #3498db;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  margin-left: 8px;
-}
-</style>
+    </style>
 </head>
-
 <body>
 
 <div id="hud">
-  <div class="group">
-    <button onclick="newGame()"><i class="fas fa-plus"></i> Nuevo</button>
-    <button onclick="undoMove()" class="secondary"><i class="fas fa-undo"></i> Undo</button>
-    <button onclick="showHint()" class="success"><i class="fas fa-lightbulb"></i> Hint</button>
-    <button onclick="autoComplete()"><i class="fas fa-bolt"></i> Auto</button>
-    <button onclick="showStats()"><i class="fas fa-chart-bar"></i> Stats</button>
-  </div>
-  
-  <div class="group">
-    <div class="hud-item"><i class="fas fa-clock"></i> <span id="timer">00:00</span></div>
-    <div class="hud-item"><i class="fas fa-star"></i> <span id="score">0</span></div>
-    <div class="hud-item"><i class="fas fa-shoe-prints"></i> <span id="moves">0</span></div>
-    <div class="hud-item"><i class="fas fa-layer-group"></i> <span id="cards-left">52</span></div>
-  </div>
-  
-  <div class="group">
-    <div class="progress-bar">
-      <div class="progress-fill" id="progress-fill"></div>
+    <div class="stats-group">
+        <div class="stat">
+            <span class="stat-label">Puntos</span>
+            <span class="stat-val" id="score">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Tiempo</span>
+            <span class="stat-val" id="timer">00:00</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Movs</span>
+            <span class="stat-val" id="moves">0</span>
+        </div>
     </div>
-    <button onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
-    <button onclick="toggleSound()"><i class="fas fa-volume-up"></i></button>
-    <button onclick="showSettings()"><i class="fas fa-cog"></i></button>
-  </div>
+    <div class="controls">
+        <button onclick="Game.undo()" title="Deshacer"><i class="fas fa-undo"></i></button>
+        <button onclick="Game.showHint()" title="Pista" class="btn-blue"><i class="fas fa-lightbulb"></i></button>
+        <button onclick="UI.toggleSettings()"><i class="fas fa-cog"></i></button>
+        <button onclick="Game.autoComplete()" id="btn-auto" class="btn-green" style="display:none"><i class="fas fa-magic"></i> Auto</button>
+        <button onclick="Game.newGameConfirm()" class="btn-green"><i class="fas fa-plus"></i> Nuevo</button>
+    </div>
 </div>
 
-<div id="game">
-  <div class="top-area">
-    <div class="stock-area">
-      <div id="stock" class="slot" onclick="drawFromStock()"></div>
-      <div id="waste" class="slot"></div>
+<div id="game-board">
+    <div class="row-top">
+        <div class="pile-group">
+            <div id="stock" class="slot" onclick="Game.drawCard()"></div>
+            <div id="waste" class="slot"></div>
+        </div>
+        <div class="pile-group">
+            <div id="fnd-0" class="slot foundation" data-icon="♥"></div>
+            <div id="fnd-1" class="slot foundation" data-icon="♦"></div>
+            <div id="fnd-2" class="slot foundation" data-icon="♣"></div>
+            <div id="fnd-3" class="slot foundation" data-icon="♠"></div>
+        </div>
     </div>
-    
-    <div class="foundation-area">
-      <div id="foundation-0" class="slot"></div>
-      <div id="foundation-1" class="slot"></div>
-      <div id="foundation-2" class="slot"></div>
-      <div id="foundation-3" class="slot"></div>
+    <div class="row-top" style="align-items: flex-start; height: auto;">
+        <div id="tab-0" class="tableau-col"></div>
+        <div id="tab-1" class="tableau-col"></div>
+        <div id="tab-2" class="tableau-col"></div>
+        <div id="tab-3" class="tableau-col"></div>
+        <div id="tab-4" class="tableau-col"></div>
+        <div id="tab-5" class="tableau-col"></div>
+        <div id="tab-6" class="tableau-col"></div>
     </div>
-  </div>
-  
-  <div class="tableau">
-    <div class="column" data-col="0"></div>
-    <div class="column" data-col="1"></div>
-    <div class="column" data-col="2"></div>
-    <div class="column" data-col="3"></div>
-    <div class="column" data-col="4"></div>
-    <div class="column" data-col="5"></div>
-    <div class="column" data-col="6"></div>
-  </div>
 </div>
 
-<!-- Pantalla de victoria -->
-<div id="victory-screen">
-  <div style="text-align: center; padding: 40px; background: rgba(0,0,0,0.8); border-radius: 20px; border: 3px solid #f39c12;">
-    <h1 style="font-size: 3em; color: #f39c12; margin-bottom: 20px;">🎉 ¡VICTORIA! 🎉</h1>
-    <div style="font-size: 1.5em; margin-bottom: 30px;">
-      <p>Tiempo: <span id="victory-time">00:00</span></p>
-      <p>Movimientos: <span id="victory-moves">0</span></p>
-      <p>Puntuación: <span id="victory-score">0</span></p>
-    </div>
-    <div style="display: flex; gap: 15px; justify-content: center;">
-      <button onclick="newGame()" style="font-size: 1.2em;"><i class="fas fa-redo"></i> Jugar de nuevo</button>
-      <button onclick="shareVictory()" class="success" style="font-size: 1.2em;"><i class="fas fa-share"></i> Compartir</button>
-    </div>
-  </div>
-</div>
+<div class="toast-container" id="toast-container"></div>
 
-<script>
-/* =========================
-   VARIABLES GLOBALES MEJORADAS
-========================= */
-
-let deck = [];
-let stock = [];
-let waste = [];
-let tableau = [[], [], [], [], [], [], []];
-let foundations = [[], [], [], []];
-let history = [];
-
-let score = 0;
-let moves = 0;
-let seconds = 0;
-let timerInterval = null;
-let gameActive = true;
-
-// Estadísticas avanzadas
-let stats = {
-  gamesPlayed: 0,
-  gamesWon: 0,
-  totalTime: 0,
-  totalMoves: 0,
-  bestTime: Infinity,
-  bestScore: 0,
-  streak: 0,
-  maxStreak: 0
-};
-
-// Configuración del juego
-let config = {
-  soundEnabled: true,
-  musicEnabled: true,
-  animations: true,
-  hintDelay: 500,
-  autoMoveDelay: 200,
-  difficulty: 'normal',
-  threeCardMode: false,
-  autoSave: true
-};
-
-// Logros mejorados
-const achievements = {
-  firstMove: { unlocked: false, name: "Primer Paso", desc: "Realiza tu primer movimiento" },
-  firstWin: { unlocked: false, name: "¡Ganador!", desc: "Completa tu primer juego" },
-  speedDemon: { unlocked: false, name: "Demonio Veloz", desc: "Gana en menos de 3 minutos" },
-  perfectGame: { unlocked: false, name: "Juego Perfecto", desc: "Gana sin usar undo" },
-  cardMaster: { unlocked: false, name: "Maestro de Cartas", desc: "Mueve 1000 cartas" },
-  marathon: { unlocked: false, name: "Maratón", desc: "Juega por más de 1 hora" },
-  streak5: { unlocked: false, name: "Racha Caliente", desc: "Gana 5 juegos seguidos" },
-  noHint: { unlocked: false, name: "Autosuficiente", desc: "Gana sin usar hints" }
-};
-
-const SUITS = ["♠", "♥", "♦", "♣"];
-const VALUES = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
-const VALUE_POINTS = { "A": 20, "K": 10, "Q": 10, "J": 10, "10": 5, "9": 5, "8": 5, "7": 5, "6": 5, "5": 5, "4": 5, "3": 5, "2": 5 };
-
-/* =========================
-   SISTEMA DE AUDIO MEJORADO
-========================= */
-
-const audio = {
-  move: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-slide-1538.mp3"),
-  flip: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-flip-1554.mp3"),
-  win: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
-  deal: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-dealing-1561.mp3"),
-  error: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"),
-  success: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3")
-};
-
-Object.values(audio).forEach(sound => {
-  sound.volume = 0.3;
-  sound.preload = 'auto';
-});
-
-function playSound(soundName) {
-  if (!config.soundEnabled || !audio[soundName]) return;
-  audio[soundName].currentTime = 0;
-  audio[soundName].play().catch(() => {});
-}
-
-/* =========================
-   INICIALIZACIÓN MEJORADA
-========================= */
-
-function newGame() {
-  if (!confirm("¿Comenzar un nuevo juego? Se perderá el progreso actual.")) return;
-  
-  createDeck();
-  shuffleDeck(deck);
-  
-  resetGameState();
-  dealCards();
-  startTimer();
-  updateProgress();
-  render();
-  saveGame();
-  
-  playSound("deal");
-  
-  // Mostrar notificación de inicio
-  showToast("¡Nuevo juego iniciado!", "success");
-}
-
-function resetGameState() {
-  stock = [];
-  waste = [];
-  tableau = [[], [], [], [], [], [], []];
-  foundations = [[], [], [], []];
-  history = [];
-  
-  score = 0;
-  moves = 0;
-  seconds = 0;
-  gameActive = true;
-  
-  document.getElementById('victory-screen').classList.remove('active');
-}
-
-/* =========================
-   BARAJA Y REPARTO MEJORADOS
-========================= */
-
-function createDeck() {
-  deck = [];
-  SUITS.forEach(suit => {
-    VALUES.forEach((value, i) => {
-      deck.push({
-        suit,
-        value,
-        rank: i + 1,
-        color: (suit === "♥" || suit === "♦") ? "red" : "black",
-        faceUp: false,
-        id: `${value}${suit}${Date.now()}${Math.random()}`
-      });
-    });
-  });
-}
-
-function shuffleDeck(deck) {
-  // Algoritmo de Fisher-Yates mejorado
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  
-  // Verificar que el juego no sea imposible
-  if (config.difficulty === 'easy') {
-    ensureWinnableDeck();
-  }
-}
-
-function ensureWinnableDeck() {
-  // Algoritmo simple para mejorar probabilidad de ganar
-  let acesOnTop = 0;
-  tableau.forEach(column => {
-    if (column.length > 0 && column[column.length-1].value === 'A') {
-      acesOnTop++;
-    }
-  });
-  
-  if (acesOnTop < 2) {
-    // Reorganizar para tener al menos 2 ases accesibles
-    for (let i = 0; i < deck.length; i++) {
-      if (deck[i].value === 'A') {
-        for (let j = 0; j < 7; j++) {
-          if (tableau[j].length > 0 && tableau[j][tableau[j].length-1].value !== 'A') {
-            const ace = deck.splice(i, 1)[0];
-            tableau[j].push(ace);
-            ace.faceUp = true;
-            return;
-          }
-        }
-      }
-    }
-  }
-}
-
-function dealCards() {
-  let index = 0;
-  
-  // Repartir con animaciones
-  for (let col = 0; col < 7; col++) {
-    for (let row = 0; row <= col; row++) {
-      const card = deck[index++];
-      if (row === col) {
-        card.faceUp = true;
-      }
-      tableau[col].push(card);
-      
-      if (config.animations) {
-        setTimeout(() => playSound("flip"), row * 50 + col * 100);
-      }
-    }
-  }
-  
-  stock = deck.slice(index);
-  
-  if (config.animations) {
-    setTimeout(() => updateAll(), 1000);
-  }
-}
-
-/* =========================
-   RENDERIZADO MEJORADO
-========================= */
-
-function render() {
-  renderStock();
-  renderWaste();
-  renderTableau();
-  renderFoundations();
-  updateCardsLeft();
-  updateProgress();
-}
-
-function renderStock() {
-  const stockEl = document.getElementById("stock");
-  stockEl.innerHTML = "";
-  stockEl.onclick = drawFromStock;
-  
-  if (stock.length > 0) {
-    const cardCount = document.createElement("div");
-    cardCount.textContent = stock.length;
-    cardCount.style.position = "absolute";
-    cardCount.style.bottom = "5px";
-    cardCount.style.right = "5px";
-    cardCount.style.background = "rgba(0,0,0,0.7)";
-    cardCount.style.padding = "2px 6px";
-    cardCount.style.borderRadius = "10px";
-    cardCount.style.fontSize = "12px";
-    
-    const card = document.createElement("div");
-    card.className = "card back";
-    card.appendChild(cardCount);
-    stockEl.appendChild(card);
-    
-    // Efecto de stock lleno
-    if (stock.length > 20) {
-      stockEl.classList.add("highlight");
-    } else {
-      stockEl.classList.remove("highlight");
-    }
-  }
-}
-
-function renderWaste() {
-  const wasteEl = document.getElementById("waste");
-  wasteEl.innerHTML = "";
-  
-  if (waste.length > 0) {
-    const topCards = config.threeCardMode ? waste.slice(-3) : [waste[waste.length - 1]];
-    
-    topCards.forEach((card, i) => {
-      const el = createCardElement(card, "waste", waste.length - 1 - i);
-      el.style.transform = `translateX(${i * 15}px)`;
-      wasteEl.appendChild(el);
-    });
-  }
-}
-
-function renderFoundations() {
-  foundations.forEach((f, i) => {
-    const el = document.getElementById(`foundation-${i}`);
-    el.innerHTML = "";
-    
-    if (f.length > 0) {
-      const card = f[f.length - 1];
-      const cardEl = createCardElement(card, "foundation", i);
-      
-      // Efecto especial para cartas altas
-      if (card.value === 'A' || card.value === 'K' || card.value === 'Q' || card.value === 'J') {
-        cardEl.classList.add(card.value.toLowerCase());
-      }
-      
-      el.appendChild(cardEl);
-      
-      // Mostrar conteo de cartas
-      const count = document.createElement("div");
-      count.textContent = f.length;
-      count.style.position = "absolute";
-      count.style.top = "5px";
-      count.style.left = "5px";
-      count.style.background = "rgba(0,0,0,0.7)";
-      count.style.padding = "2px 6px";
-      count.style.borderRadius = "10px";
-      count.style.fontSize = "12px";
-      el.appendChild(count);
-    }
-  });
-}
-
-function renderTableau() {
-  document.querySelectorAll(".column").forEach((col, colIndex) => {
-    col.innerHTML = "";
-    const column = tableau[colIndex];
-    
-    column.forEach((card, cardIndex) => {
-      const el = createCardElement(card, "tableau", colIndex, cardIndex);
-      el.style.top = `${cardIndex * 25}px`;
-      el.style.zIndex = cardIndex;
-      
-      // Resaltar cartas movibles
-      if (card.faceUp && isCardMovable(card, colIndex, cardIndex)) {
-        el.classList.add("autoplace-highlight");
-      }
-      
-      col.appendChild(el);
-    });
-  });
-}
-
-function createCardElement(card, area, col, index) {
-  const el = document.createElement("div");
-  el.className = `card ${card.color}`;
-  el.dataset.id = card.id;
-  el.dataset.area = area;
-  el.dataset.col = col;
-  el.dataset.index = index;
-  
-  if (!card.faceUp) {
-    el.classList.add("back");
-  } else {
-    el.innerHTML = `<div style="font-size: 24px;">${card.value}${card.suit}</div>`;
-    
-    // Añadir eventos para drag & drop
-    el.onmousedown = (e) => startDrag(e, area, col, index);
-    el.ondblclick = () => smartAutoMove(area, col, index);
-    el.oncontextmenu = (e) => {
-      e.preventDefault();
-      quickMoveToFoundation(area, col, index);
-    };
-  }
-  
-  return el;
-}
-
-/* =========================
-   DRAG & DROP MEJORADO
-========================= */
-
-let draggedCards = [];
-let dragOrigin = null;
-let isDragging = false;
-let dragOffset = { x: 0, y: 0 };
-
-function startDrag(e, area, col, index) {
-  if (!gameActive || (area !== "tableau" && area !== "waste")) return;
-  
-  e.preventDefault();
-  isDragging = true;
-  draggedCards = [];
-  dragOffset = { x: e.clientX, y: e.clientY };
-  
-  if (area === "tableau") {
-    draggedCards = tableau[col].slice(index);
-    dragOrigin = { area, col, index };
-  } else if (area === "waste") {
-    draggedCards = [waste[waste.length - 1]];
-    dragOrigin = { area };
-  }
-  
-  // Crear elementos de arrastre
-  createDragElements();
-  
-  document.addEventListener("mousemove", onDragMove);
-  document.addEventListener("mouseup", endDrag);
-  document.addEventListener("touchmove", onDragMove);
-  document.addEventListener("touchend", endDrag);
-}
-
-function createDragElements() {
-  draggedCards.forEach((card, i) => {
-    const el = document.createElement("div");
-    el.className = "card dragging";
-    el.style.position = "fixed";
-    el.style.left = (dragOffset.x - 40) + "px";
-    el.style.top = (dragOffset.y - 56 + i * 15) + "px";
-    el.style.zIndex = 10000;
-    el.innerHTML = card.faceUp ? `<div style="font-size: 24px;">${card.value}${card.suit}</div>` : "";
-    el.style.color = card.color === "red" ? "#c0392b" : "#111";
-    el.id = `drag-${i}`;
-    document.body.appendChild(el);
-  });
-}
-
-function onDragMove(e) {
-  if (!isDragging) return;
-  
-  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-  
-  if (!clientX || !clientY) return;
-  
-  draggedCards.forEach((card, i) => {
-    const el = document.getElementById(`drag-${i}`);
-    if (el) {
-      el.style.left = (clientX - 40) + "px";
-      el.style.top = (clientY - 56 + i * 15) + "px";
-    }
-  });
-  
-  // Resaltar zonas de drop válidas
-  highlightValidDropZones();
-}
-
-function endDrag(e) {
-  if (!isDragging) return;
-  
-  const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
-  const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
-  
-  let dropped = false;
-  const dropTarget = document.elementFromPoint(clientX, clientY);
-  
-  if (dropTarget) {
-    const colEl = dropTarget.closest(".column");
-    const foundationEl = dropTarget.closest(".slot");
-    const tableauEl = dropTarget.closest(".tableau");
-    
-    if (colEl) {
-      const colIndex = parseInt(colEl.dataset.col);
-      dropped = tryDropTableau(colIndex);
-    } else if (foundationEl && foundationEl.id.includes("foundation")) {
-      const i = parseInt(foundationEl.id.split("-")[1]);
-      dropped = tryDropFoundation(i);
-    } else if (tableauEl) {
-      // Dropping on empty tableau area - find nearest column
-      const rect = tableauEl.getBoundingClientRect();
-      const colWidth = 80;
-      const colIndex = Math.floor((clientX - rect.left) / colWidth);
-      if (colIndex >= 0 && colIndex < 7) {
-        dropped = tryDropTableau(colIndex);
-      }
-    }
-  }
-  
-  cleanupDrag();
-  
-  if (dropped) {
-    saveState();
-    moves++;
-    score += calculateMoveScore(draggedCards.length);
-    playSound("move");
-    
-    // Verificar movimiento automático
-    setTimeout(() => checkAutoMoves(), 300);
-    
-    updateAll();
-    checkAchievements();
-  }
-  
-  isDragging = false;
-}
-
-function cleanupDrag() {
-  document.removeEventListener("mousemove", onDragMove);
-  document.removeEventListener("mouseup", endDrag);
-  document.removeEventListener("touchmove", onDragMove);
-  document.removeEventListener("touchend", endDrag);
-  
-  // Eliminar elementos de arrastre
-  for (let i = 0; i < draggedCards.length; i++) {
-    const el = document.getElementById(`drag-${i}`);
-    if (el) el.remove();
-  }
-  
-  // Limpiar resaltados
-  clearHighlights();
-}
-
-function highlightValidDropZones() {
-  clearHighlights();
-  
-  const card = draggedCards[0];
-  
-  // Resaltar columnas válidas
-  for (let col = 0; col < 7; col++) {
-    const target = tableau[col];
-    const colEl = document.querySelector(`.column[data-col="${col}"]`);
-    
-    let isValid = false;
-    if (target.length === 0) {
-      isValid = card.rank === 13; // Solo reyes en columnas vacías
-    } else {
-      const top = target[target.length - 1];
-      isValid = top.faceUp && top.color !== card.color && top.rank === card.rank + 1;
-    }
-    
-    if (isValid) {
-      colEl.style.border = "2px solid #2ecc71";
-      colEl.style.borderRadius = "8px";
-      colEl.style.padding = "2px";
-    }
-  }
-  
-  // Resaltar foundations válidas
-  for (let i = 0; i < 4; i++) {
-    if (draggedCards.length === 1 && canMoveToFoundation(card, foundations[i])) {
-      const foundationEl = document.getElementById(`foundation-${i}`);
-      foundationEl.classList.add("highlight");
-    }
-  }
-}
-
-function clearHighlights() {
-  document.querySelectorAll(".column").forEach(col => {
-    col.style.border = "";
-    col.style.borderRadius = "";
-    col.style.padding = "";
-  });
-  
-  document.querySelectorAll(".slot").forEach(slot => {
-    slot.classList.remove("highlight");
-  });
-}
-
-/* =========================
-   MECÁNICAS DE JUEGO MEJORADAS
-========================= */
-
-function drawFromStock() {
-  if (!gameActive) return;
-  
-  saveState();
-  
-  if (stock.length === 0) {
-    if (waste.length === 0) return;
-    
-    // Reciclar waste con penalización
-    stock = waste.reverse();
-    waste = [];
-    stock.forEach(c => {
-      c.faceUp = false;
-      c.recycled = (c.recycled || 0) + 1;
-    });
-    
-    score = Math.max(0, score - 20); // Penalización por reciclar
-    showToast("¡Waste reciclado! -20 puntos", "warning");
-  } else {
-    const drawCount = config.threeCardMode ? 3 : 1;
-    for (let i = 0; i < drawCount && stock.length > 0; i++) {
-      const card = stock.pop();
-      card.faceUp = true;
-      waste.push(card);
-    }
-  }
-  
-  moves++;
-  playSound("flip");
-  updateAll();
-}
-
-function smartAutoMove(area, col, index) {
-  if (!gameActive) return;
-  
-  if (area === "tableau") {
-    const card = tableau[col][index];
-    if (!card.faceUp) return;
-    
-    // Intentar mover a foundation
-    for (let i = 0; i < 4; i++) {
-      if (canMoveToFoundation(card, foundations[i])) {
-        performAutoMove(col, i, "tableau");
-        return;
-      }
-    }
-    
-    // Intentar mover a otra columna
-    for (let targetCol = 0; targetCol < 7; targetCol++) {
-      if (targetCol === col) continue;
-      if (canMoveToTableau(col, index, targetCol)) {
-        performTableauMove(col, index, targetCol);
-        return;
-      }
-    }
-  } else if (area === "waste") {
-    const card = waste[waste.length - 1];
-    for (let i = 0; i < 4; i++) {
-      if (canMoveToFoundation(card, foundations[i])) {
-        performAutoMove(-1, i, "waste");
-        return;
-      }
-    }
-  }
-}
-
-function quickMoveToFoundation(area, col, index) {
-  if (!gameActive) return;
-  
-  let card;
-  if (area === "tableau") {
-    card = tableau[col][index];
-    if (!card.faceUp || index !== tableau[col].length - 1) return;
-  } else if (area === "waste") {
-    card = waste[waste.length - 1];
-  } else {
-    return;
-  }
-  
-  for (let i = 0; i < 4; i++) {
-    if (canMoveToFoundation(card, foundations[i])) {
-      performAutoMove(col, i, area);
-      break;
-    }
-  }
-}
-
-function performAutoMove(fromCol, toFoundation, fromArea) {
-  saveState();
-  let card;
-  
-  if (fromArea === "tableau") {
-    card = tableau[fromCol].pop();
-    revealLast(fromCol);
-  } else if (fromArea === "waste") {
-    card = waste.pop();
-  }
-  
-  if (card) {
-    foundations[toFoundation].push(card);
-    moves++;
-    score += 15; // Bonus por movimiento automático
-    playSound("success");
-    
-    showToast(`+15 puntos! ${card.value}${card.suit} movida`, "success");
-    updateAll();
-  }
-}
-
-function performTableauMove(fromCol, fromIndex, toCol) {
-  saveState();
-  const cardsToMove = tableau[fromCol].slice(fromIndex);
-  tableau[fromCol].splice(fromIndex);
-  tableau[toCol].push(...cardsToMove);
-  revealLast(fromCol);
-  
-  moves++;
-  score += calculateMoveScore(cardsToMove.length);
-  playSound("move");
-  updateAll();
-}
-
-/* =========================
-   SISTEMA DE HINTS INTELIGENTE
-========================= */
-
-let hintTimeout = null;
-let currentHint = null;
-
-function showHint() {
-  if (!gameActive) return;
-  
-  clearHints();
-  
-  // Prioridad 1: Mover a foundation
-  for (let col = 0; col < 7; col++) {
-    const column = tableau[col];
-    if (column.length === 0) continue;
-    const card = column[column.length - 1];
-    if (!card.faceUp) continue;
-    
-    for (let f = 0; f < 4; f++) {
-      if (canMoveToFoundation(card, foundations[f])) {
-        currentHint = { type: 'foundation', col, foundation: f, card };
-        showCardHint(card);
-        showFoundationHint(f);
-        return;
-      }
-    }
-  }
-  
-  // Prioridad 2: Mover desde waste a foundation
-  if (waste.length > 0) {
-    const card = waste[waste.length - 1];
-    for (let f = 0; f < 4; f++) {
-      if (canMoveToFoundation(card, foundations[f])) {
-        currentHint = { type: 'waste-foundation', foundation: f, card };
-        showCardHint(card);
-        showFoundationHint(f);
-        return;
-      }
-    }
-  }
-  
-  // Prioridad 3: Mover entre columnas para liberar cartas
-  for (let fromCol = 0; fromCol < 7; fromCol++) {
-    for (let cardIndex = tableau[fromCol].length - 1; cardIndex >= 0; cardIndex--) {
-      const card = tableau[fromCol][cardIndex];
-      if (!card.faceUp) continue;
-      
-      for (let toCol = 0; toCol < 7; toCol++) {
-        if (fromCol === toCol) continue;
+<!-- Modal Ajustes -->
+<div id="settings-modal" class="modal-overlay">
+    <div class="modal">
+        <h2><i class="fas fa-cog"></i> Configuración</h2>
         
-        if (canMoveToTableau(fromCol, cardIndex, toCol)) {
-          currentHint = { type: 'tableau', fromCol, toCol, cardIndex, card };
-          showCardHint(card);
-          showTableauHint(toCol);
-          return;
-        }
-      }
-    }
-  }
-  
-  // Prioridad 4: Sacar del stock
-  if (stock.length > 0) {
-    showToast("Intenta sacar cartas del stock", "info");
-    document.getElementById("stock").classList.add("glow");
-    currentHint = { type: 'stock' };
-  } else {
-    showToast("No hay movimientos disponibles", "warning");
-  }
-}
-
-function clearHints() {
-  document.querySelectorAll(".glow").forEach(el => el.classList.remove("glow"));
-  if (hintTimeout) clearTimeout(hintTimeout);
-  currentHint = null;
-}
-
-function showCardHint(card) {
-  document.querySelectorAll(".card").forEach(el => {
-    if (el.innerText.includes(card.value) && el.innerText.includes(card.suit)) {
-      el.classList.add("glow");
-    }
-  });
-}
-
-function showFoundationHint(f) {
-  const slot = document.getElementById(`foundation-${f}`);
-  slot.classList.add("glow");
-}
-
-function showTableauHint(col) {
-  const column = document.querySelector(`.column[data-col="${col}"]`);
-  column.style.border = "2px solid #f39c12";
-  column.style.borderRadius = "8px";
-}
-
-/* =========================
-   AUTO-COMPLETE INTELIGENTE
-========================= */
-
-function autoComplete() {
-  if (!gameActive) return;
-  
-  let movesMade = 0;
-  let maxMoves = 100; // Límite de seguridad
-  
-  const autoMove = () => {
-    if (movesMade >= maxMoves || !gameActive) {
-      showToast(`Auto-completado: ${movesMade} movimientos realizados`, "info");
-      updateAll();
-      return;
-    }
-    
-    let moved = false;
-    
-    // Buscar movimientos a foundation
-    for (let col = 0; col < 7; col++) {
-      const column = tableau[col];
-      if (column.length === 0) continue;
-      const card = column[column.length - 1];
-      if (!card.faceUp) continue;
-      
-      for (let f = 0; f < 4; f++) {
-        if (canMoveToFoundation(card, foundations[f])) {
-          saveState();
-          foundations[f].push(column.pop());
-          revealLast(col);
-          moves++;
-          movesMade++;
-          score += 10;
-          moved = true;
-          
-          setTimeout(autoMove, config.autoMoveDelay);
-          return;
-        }
-      }
-    }
-    
-    // Buscar movimientos desde waste
-    if (waste.length > 0) {
-      const card = waste[waste.length - 1];
-      for (let f = 0; f < 4; f++) {
-        if (canMoveToFoundation(card, foundations[f])) {
-          saveState();
-          foundations[f].push(waste.pop());
-          moves++;
-          movesMade++;
-          score += 10;
-          moved = true;
-          
-          setTimeout(autoMove, config.autoMoveDelay);
-          return;
-        }
-      }
-    }
-    
-    // Si no hay movimientos, terminar
-    if (!moved) {
-      showToast(`Auto-completado: ${movesMade} movimientos realizados`, "info");
-      updateAll();
-    }
-  };
-  
-  showToast("Iniciando auto-completado...", "info");
-  autoMove();
-}
-
-/* =========================
-   SISTEMA DE PUNTUACIÓN MEJORADO
-========================= */
-
-function calculateMoveScore(cardsMoved) {
-  let baseScore = 5;
-  let multiplier = 1;
-  
-  // Bonus por múltiples cartas
-  if (cardsMoved > 1) {
-    multiplier += cardsMoved * 0.5;
-  }
-  
-  // Bonus por cartas especiales
-  const topCard = draggedCards[0];
-  if (topCard) {
-    if (topCard.value === 'A') multiplier += 2;
-    if (topCard.value === 'K') multiplier += 1.5;
-    if (topCard.rank >= 10) multiplier += 0.5;
-  }
-  
-  // Penalización por reciclaje
-  if (topCard && topCard.recycled) {
-    multiplier *= Math.max(0.5, 1 - (topCard.recycled * 0.2));
-  }
-  
-  return Math.round(baseScore * multiplier);
-}
-
-function updateScore() {
-  let foundationScore = 0;
-  foundations.forEach(f => {
-    f.forEach(card => {
-      foundationScore += VALUE_POINTS[card.value] || 5;
-    });
-  });
-  
-  // Bonus por velocidad
-  let timeBonus = 0;
-  if (seconds < 300) { // Menos de 5 minutos
-    timeBonus = Math.max(0, 500 - seconds);
-  }
-  
-  // Bonus por eficiencia
-  let efficiencyBonus = 0;
-  if (moves > 0) {
-    const cardsInFoundations = foundations.reduce((a, f) => a + f.length, 0);
-    const efficiency = cardsInFoundations / moves;
-    efficiencyBonus = Math.round(efficiency * 100);
-  }
-  
-  score = foundationScore + timeBonus + efficiencyBonus;
-  document.getElementById("score").textContent = score;
-}
-
-/* =========================
-   SISTEMA DE LOGROS MEJORADO
-========================= */
-
-function checkAchievements() {
-  // Primer movimiento
-  if (!achievements.firstMove.unlocked && moves >= 1) {
-    unlockAchievement("firstMove");
-  }
-  
-  // Movimientos rápidos
-  if (!achievements.speedDemon.unlocked && stats.bestTime > 0 && stats.bestTime < 180) {
-    unlockAchievement("speedDemon");
-  }
-  
-  // Juego perfecto
-  if (!achievements.perfectGame.unlocked && stats.gamesWon > 0) {
-    const gameStats = loadCurrentGameStats();
-    if (gameStats && gameStats.undosUsed === 0) {
-      unlockAchievement("perfectGame");
-    }
-  }
-  
-  // Maestro de cartas
-  if (!achievements.cardMaster.unlocked && stats.totalMoves >= 1000) {
-    unlockAchievement("cardMaster");
-  }
-  
-  // Sin hints
-  if (!achievements.noHint.unlocked && stats.gamesWon > 0) {
-    const gameStats = loadCurrentGameStats();
-    if (gameStats && gameStats.hintsUsed === 0) {
-      unlockAchievement("noHint");
-    }
-  }
-}
-
-function unlockAchievement(achievementKey) {
-  const achievement = achievements[achievementKey];
-  if (!achievement || achievement.unlocked) return;
-  
-  achievement.unlocked = true;
-  score += 100; // Bonus por logro
-  
-  // Mostrar notificación
-  showAchievementNotification(achievement);
-  
-  // Guardar logros
-  saveAchievements();
-  
-  playSound("success");
-}
-
-function showAchievementNotification(achievement) {
-  const notification = document.createElement("div");
-  notification.className = "achievement-notification success";
-  notification.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <i class="fas fa-trophy" style="font-size: 24px; color: #f39c12;"></i>
-      <div>
-        <strong style="color: #f39c12;">🏆 Logro Desbloqueado!</strong><br>
-        <strong>${achievement.name}</strong><br>
-        <small>${achievement.desc}</small>
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.style.opacity = "0";
-    notification.style.transform = "translateX(100%)";
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
-}
-
-/* =========================
-   SISTEMA DE ESTADÍSTICAS
-========================= */
-
-function showStats() {
-  const panel = document.createElement("div");
-  panel.className = "stats-panel";
-  
-  const winRate = stats.gamesPlayed > 0 ? ((stats.gamesWon / stats.gamesPlayed) * 100).toFixed(1) : "0";
-  const avgTime = stats.gamesWon > 0 ? Math.round(stats.totalTime / stats.gamesWon) : 0;
-  const avgMoves = stats.gamesWon > 0 ? Math.round(stats.totalMoves / stats.gamesWon) : 0;
-  
-  panel.innerHTML = `
-    <h2 style="margin-top: 0; color: #1abc9c;"><i class="fas fa-chart-bar"></i> Estadísticas</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
-      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
-        <small>Juegos Jugados</small>
-        <div style="font-size: 24px; font-weight: bold;">${stats.gamesPlayed}</div>
-      </div>
-      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
-        <small>Juegos Ganados</small>
-        <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">${stats.gamesWon}</div>
-      </div>
-      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
-        <small>Tasa de Victoria</small>
-        <div style="font-size: 24px; font-weight: bold;">${winRate}%</div>
-      </div>
-      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
-        <small>Mejor Tiempo</small>
-        <div style="font-size: 24px; font-weight: bold;">${formatTime(stats.bestTime)}</div>
-      </div>
-      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
-        <small>Mejor Puntuación</small>
-        <div style="font-size: 24px; font-weight: bold; color: #f39c12;">${stats.bestScore}</div>
-      </div>
-      <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
-        <small>Racha Actual</small>
-        <div style="font-size: 24px; font-weight: bold;">${stats.streak} 🔥</div>
-      </div>
-    </div>
-    
-    <h3><i class="fas fa-trophy"></i> Logros (${Object.values(achievements).filter(a => a.unlocked).length}/${Object.keys(achievements).length})</h3>
-    <div style="max-height: 200px; overflow-y: auto; margin: 10px 0;">
-      ${Object.values(achievements).map(a => `
-        <div style="display: flex; align-items: center; padding: 8px; background: ${a.unlocked ? 'rgba(46, 204, 113, 0.2)' : 'rgba(255,255,255,0.05)'}; 
-             margin: 5px 0; border-radius: 6px; border-left: 3px solid ${a.unlocked ? '#2ecc71' : '#7f8c8d'}">
-          ${a.unlocked ? '<i class="fas fa-check-circle" style="color: #2ecc71; margin-right: 10px;"></i>' : 
-            '<i class="far fa-circle" style="color: #7f8c8d; margin-right: 10px;"></i>'}
-          <div>
-            <div><strong>${a.name}</strong></div>
-            <small style="opacity: 0.8;">${a.desc}</small>
-          </div>
+        <div class="setting-row">
+            <span><i class="fas fa-volume-up"></i> Sonido</span>
+            <label class="switch">
+                <input type="checkbox" id="toggle-sound" checked onchange="AudioMgr.toggle(this.checked)">
+                <span class="slider"></span>
+            </label>
         </div>
-      `).join('')}
-    </div>
-    
-    <div style="display: flex; gap: 10px; margin-top: 20px;">
-      <button onclick="resetStats()" class="danger" style="flex: 1;"><i class="fas fa-trash"></i> Resetear Stats</button>
-      <button onclick="panel.remove()" style="flex: 1;"><i class="fas fa-times"></i> Cerrar</button>
-    </div>
-  `;
-  
-  document.body.appendChild(panel);
-}
-
-function resetStats() {
-  if (!confirm("¿Estás seguro de querer resetear todas las estadísticas? Esto no se puede deshacer.")) return;
-  
-  stats = {
-    gamesPlayed: 0,
-    gamesWon: 0,
-    totalTime: 0,
-    totalMoves: 0,
-    bestTime: Infinity,
-    bestScore: 0,
-    streak: 0,
-    maxStreak: 0
-  };
-  
-  Object.values(achievements).forEach(a => a.unlocked = false);
-  
-  saveStats();
-  saveAchievements();
-  
-  showToast("Estadísticas reseteadas", "info");
-  document.querySelector('.stats-panel').remove();
-}
-
-/* =========================
-   SISTEMA DE VICTORIA MEJORADO
-========================= */
-
-function checkWin() {
-  const totalCards = foundations.reduce((a, f) => a + f.length, 0);
-  if (totalCards === 52 && gameActive) {
-    gameActive = false;
-    clearInterval(timerInterval);
-    
-    // Actualizar estadísticas
-    stats.gamesPlayed++;
-    stats.gamesWon++;
-    stats.totalTime += seconds;
-    stats.totalMoves += moves;
-    stats.streak++;
-    
-    if (seconds < stats.bestTime) stats.bestTime = seconds;
-    if (score > stats.bestScore) stats.bestScore = score;
-    if (stats.streak > stats.maxStreak) stats.maxStreak = stats.streak;
-    
-    // Desbloquear logros
-    if (!achievements.firstWin.unlocked) unlockAchievement("firstWin");
-    if (stats.streak >= 5 && !achievements.streak5.unlocked) unlockAchievement("streak5");
-    if (seconds < 180 && !achievements.speedDemon.unlocked) unlockAchievement("speedDemon");
-    
-    // Mostrar pantalla de victoria
-    showVictoryScreen();
-    
-    playSound("win");
-    launchEnhancedConfetti();
-    
-    saveStats();
-    saveGame();
-  }
-  
-  return totalCards === 52;
-}
-
-function showVictoryScreen() {
-  document.getElementById('victory-time').textContent = formatTime(seconds);
-  document.getElementById('victory-moves').textContent = moves;
-  document.getElementById('victory-score').textContent = score;
-  document.getElementById('victory-screen').classList.add('active');
-}
-
-function shareVictory() {
-  const text = `¡Gané al Solitario Klondike ULTRA! 🎉\nTiempo: ${formatTime(seconds)}\nMovimientos: ${moves}\nPuntuación: ${score}\n\n¡Juega tú también en este increíble juego!`;
-  
-  if (navigator.share) {
-    navigator.share({
-      title: 'Victoria en Solitario ULTRA',
-      text: text,
-      url: window.location.href
-    }).catch(() => {
-      navigator.clipboard.writeText(text);
-      showToast("Texto copiado al portapapeles!", "success");
-    });
-  } else {
-    navigator.clipboard.writeText(text);
-    showToast("Texto copiado al portapapeles!", "success");
-  }
-}
-
-/* =========================
-   UTILIDADES MEJORADAS
-========================= */
-
-function updateAll() {
-  updateHUD();
-  render();
-  updateScore();
-  updateProgress();
-  checkWin();
-}
-
-function updateHUD() {
-  document.getElementById("score").textContent = score;
-  document.getElementById("moves").textContent = moves;
-  document.getElementById("timer").textContent = formatTime(seconds);
-}
-
-function updateCardsLeft() {
-  const foundationCards = foundations.reduce((a, f) => a + f.length, 0);
-  document.getElementById("cards-left").textContent = 52 - foundationCards;
-}
-
-function updateProgress() {
-  const foundationCards = foundations.reduce((a, f) => a + f.length, 0);
-  const progress = (foundationCards / 52) * 100;
-  document.getElementById("progress-fill").style.width = `${progress}%`;
-}
-
-function formatTime(totalSeconds) {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  
-  if (hours > 0) {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
-
-function startTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    seconds++;
-    updateHUD();
-    
-    // Logro de maratón
-    if (seconds >= 3600 && !achievements.marathon.unlocked) {
-      unlockAchievement("marathon");
-    }
-  }, 1000);
-}
-
-function showToast(message, type = "info") {
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.textContent = message;
-  toast.style.background = type === "success" ? "rgba(46, 204, 113, 0.9)" : 
-                          type === "warning" ? "rgba(243, 156, 18, 0.9)" : 
-                          type === "error" ? "rgba(231, 76, 60, 0.9)" : 
-                          "rgba(52, 152, 219, 0.9)";
-  
-  document.body.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.style.opacity = "0";
-    toast.style.transform = "translate(-50%, 20px)";
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
-
-function launchEnhancedConfetti() {
-  const colors = ['#1abc9c', '#2ecc71', '#3498db', '#9b59b6', '#f39c12', '#e74c3c'];
-  
-  for (let i = 0; i < 200; i++) {
-    setTimeout(() => {
-      const confetti = document.createElement("div");
-      confetti.style.position = "fixed";
-      confetti.style.width = Math.random() * 10 + 5 + "px";
-      confetti.style.height = Math.random() * 10 + 5 + "px";
-      confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-      confetti.style.left = Math.random() * 100 + "%";
-      confetti.style.top = "-20px";
-      confetti.style.borderRadius = Math.random() > 0.5 ? "50%" : "0";
-      confetti.style.opacity = "0.9";
-      confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-      confetti.style.zIndex = "99998";
-      
-      document.body.appendChild(confetti);
-      
-      const animation = confetti.animate([
-        { transform: `translate(0, 0) rotate(0deg)`, opacity: 1 },
-        { transform: `translate(${Math.random() * 100 - 50}px, 110vh) rotate(${Math.random() * 720}deg)`, opacity: 0 }
-      ], {
-        duration: Math.random() * 3000 + 2000,
-        easing: "cubic-bezier(0.1, 0.8, 0.3, 1)"
-      });
-      
-      animation.onfinish = () => confetti.remove();
-    }, i * 20);
-  }
-}
-
-/* =========================
-   FUNCIONES DE VALIDACIÓN MEJORADAS
-========================= */
-
-function canMoveToTableau(fromCol, fromIndex, toCol) {
-  if (fromCol === toCol) return false;
-  
-  const movingCards = tableau[fromCol].slice(fromIndex);
-  if (movingCards.length === 0) return false;
-  
-  const firstCard = movingCards[0];
-  const targetColumn = tableau[toCol];
-  
-  if (targetColumn.length === 0) {
-    return firstCard.rank === 13; // Solo reyes en columnas vacías
-  }
-  
-  const lastCard = targetColumn[targetColumn.length - 1];
-  return lastCard.faceUp && 
-         lastCard.color !== firstCard.color && 
-         lastCard.rank === firstCard.rank + 1;
-}
-
-function canMoveToFoundation(card, foundation) {
-  if (foundation.length === 0) {
-    return card.rank === 1; // Solo ases
-  }
-  
-  const topCard = foundation[foundation.length - 1];
-  return topCard.suit === card.suit && 
-         card.rank === topCard.rank + 1;
-}
-
-function isCardMovable(card, col, index) {
-  if (!card.faceUp) return false;
-  
-  // Verificar si puede ir a foundation
-  for (let f = 0; f < 4; f++) {
-    if (canMoveToFoundation(card, foundations[f])) {
-      return true;
-    }
-  }
-  
-  // Verificar si puede mover a otra columna
-  if (index === tableau[col].length - 1) {
-    for (let targetCol = 0; targetCol < 7; targetCol++) {
-      if (targetCol !== col && canMoveToTableau(col, index, targetCol)) {
-        return true;
-      }
-    }
-  }
-  
-  return false;
-}
-
-function checkAutoMoves() {
-  // Verificar si hay movimientos automáticos disponibles
-  for (let col = 0; col < 7; col++) {
-    const column = tableau[col];
-    if (column.length === 0) continue;
-    const card = column[column.length - 1];
-    if (!card.faceUp) continue;
-    
-    for (let f = 0; f < 4; f++) {
-      if (canMoveToFoundation(card, foundations[f])) {
-        showToast(`Movimiento automático disponible!`, "info");
-        return;
-      }
-    }
-  }
-}
-
-/* =========================
-   SISTEMA DE GUARDADO MEJORADO
-========================= */
-
-function saveGame() {
-  if (!config.autoSave) return;
-  
-  const gameData = {
-    tableau: tableau.map(col => col.map(card => ({
-      suit: card.suit,
-      value: card.value,
-      rank: card.rank,
-      color: card.color,
-      faceUp: card.faceUp,
-      id: card.id,
-      recycled: card.recycled || 0
-    }))),
-    foundations: foundations.map(f => f.map(card => ({
-      suit: card.suit,
-      value: card.value,
-      rank: card.rank,
-      color: card.color,
-      faceUp: card.faceUp,
-      id: card.id
-    }))),
-    stock: stock.map(card => ({
-      suit: card.suit,
-      value: card.value,
-      rank: card.rank,
-      color: card.color,
-      faceUp: card.faceUp,
-      id: card.id,
-      recycled: card.recycled || 0
-    })),
-    waste: waste.map(card => ({
-      suit: card.suit,
-      value: card.value,
-      rank: card.rank,
-      color: card.color,
-      faceUp: card.faceUp,
-      id: card.id,
-      recycled: card.recycled || 0
-    })),
-    score,
-    moves,
-    seconds,
-    history: history.slice(-10), // Guardar solo últimos 10 estados
-    timestamp: Date.now()
-  };
-  
-  localStorage.setItem("solitarioUltraSave", JSON.stringify(gameData));
-  localStorage.setItem("solitarioUltraConfig", JSON.stringify(config));
-}
-
-function loadGame() {
-  try {
-    const savedGame = localStorage.getItem("solitarioUltraSave");
-    const savedConfig = localStorage.getItem("solitarioUltraConfig");
-    const savedStats = localStorage.getItem("solitarioUltraStats");
-    const savedAchievements = localStorage.getItem("solitarioUltraAchievements");
-    
-    if (savedConfig) {
-      config = { ...config, ...JSON.parse(savedConfig) };
-    }
-    
-    if (savedStats) {
-      stats = JSON.parse(savedStats);
-    }
-    
-    if (savedAchievements) {
-      const loaded = JSON.parse(savedAchievements);
-      Object.keys(loaded).forEach(key => {
-        if (achievements[key]) {
-          achievements[key].unlocked = loaded[key];
-        }
-      });
-    }
-    
-    if (savedGame) {
-      const gameData = JSON.parse(savedGame);
-      
-      // Verificar si el juego guardado es reciente (menos de 24 horas)
-      const age = Date.now() - (gameData.timestamp || 0);
-      if (age > 24 * 60 * 60 * 1000) {
-        if (confirm("Tienes un juego guardado antiguo. ¿Quieres continuarlo?")) {
-          restoreGame(gameData);
-        } else {
-          newGame();
-        }
-      } else {
-        if (confirm("¿Continuar juego guardado?")) {
-          restoreGame(gameData);
-        } else {
-          newGame();
-        }
-      }
-    } else {
-      newGame();
-    }
-  } catch (error) {
-    console.error("Error cargando juego:", error);
-    newGame();
-  }
-}
-
-function restoreGame(gameData) {
-  tableau = gameData.tableau;
-  foundations = gameData.foundations;
-  stock = gameData.stock;
-  waste = gameData.waste;
-  score = gameData.score;
-  moves = gameData.moves;
-  seconds = gameData.seconds;
-  history = gameData.history || [];
-  
-  startTimer();
-  updateAll();
-  showToast("Juego cargado correctamente", "success");
-}
-
-function saveStats() {
-  localStorage.setItem("solitarioUltraStats", JSON.stringify(stats));
-}
-
-function saveAchievements() {
-  const achievementsData = {};
-  Object.keys(achievements).forEach(key => {
-    achievementsData[key] = achievements[key].unlocked;
-  });
-  localStorage.setItem("solitarioUltraAchievements", JSON.stringify(achievementsData));
-}
-
-function loadCurrentGameStats() {
-  return {
-    undosUsed: 0, // Implementar seguimiento
-    hintsUsed: 0, // Implementar seguimiento
-    timestamp: Date.now()
-  };
-}
-
-/* =========================
-   CONFIGURACIÓN Y SETTINGS
-========================= */
-
-function showSettings() {
-  const panel = document.createElement("div");
-  panel.className = "stats-panel";
-  panel.innerHTML = `
-    <h2 style="margin-top: 0; color: #1abc9c;"><i class="fas fa-cog"></i> Configuración</h2>
-    
-    <div style="margin: 20px 0;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-        <span><i class="fas fa-volume-up"></i> Sonido</span>
-        <label class="switch">
-          <input type="checkbox" ${config.soundEnabled ? 'checked' : ''} onchange="config.soundEnabled = this.checked; saveGame();">
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-        <span><i class="fas fa-music"></i> Música</span>
-        <label class="switch">
-          <input type="checkbox" ${config.musicEnabled ? 'checked' : ''} onchange="config.musicEnabled = this.checked; saveGame(); toggleMusic();">
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-        <span><i class="fas fa-film"></i> Animaciones</span>
-        <label class="switch">
-          <input type="checkbox" ${config.animations ? 'checked' : ''} onchange="config.animations = this.checked; saveGame();">
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-        <span><i class="fas fa-save"></i> Auto-guardado</span>
-        <label class="switch">
-          <input type="checkbox" ${config.autoSave ? 'checked' : ''} onchange="config.autoSave = this.checked; saveGame();">
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-        <div style="margin-bottom: 8px;"><i class="fas fa-chess-king"></i> Dificultad</div>
-        <div style="display: flex; gap: 10px;">
-          <button onclick="config.difficulty='easy'; saveGame(); showToast('Dificultad: Fácil', 'info')" 
-                  ${config.difficulty === 'easy' ? 'class="success"' : ''} style="flex: 1;">Fácil</button>
-          <button onclick="config.difficulty='normal'; saveGame(); showToast('Dificultad: Normal', 'info')" 
-                  ${config.difficulty === 'normal' ? 'class="success"' : ''} style="flex: 1;">Normal</button>
-          <button onclick="config.difficulty='hard'; saveGame(); showToast('Dificultad: Difícil', 'info')" 
-                  ${config.difficulty === 'hard' ? 'class="success"' : ''} style="flex: 1;">Difícil</button>
+        
+        <div class="setting-row">
+            <span><i class="fas fa-layer-group"></i> Robar 3 Cartas (Difícil)</span>
+            <label class="switch">
+                <input type="checkbox" id="toggle-draw3" onchange="Game.setDrawMode(this.checked)">
+                <span class="slider"></span>
+            </label>
         </div>
-      </div>
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
-        <span><i class="fas fa-layer-group"></i> Modo 3 cartas</span>
-        <label class="switch">
-          <input type="checkbox" ${config.threeCardMode ? 'checked' : ''} onchange="config.threeCardMode = this.checked; saveGame(); newGame();">
-          <span class="slider"></span>
-        </label>
-      </div>
+        
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button onclick="UI.toggleSettings()" style="flex:1; justify-content:center;">Cerrar</button>
+            <button onclick="Game.init(); UI.toggleSettings()" class="btn-green" style="flex:1; justify-content:center;">Reiniciar</button>
+        </div>
     </div>
-    
-    <div style="margin: 20px 0;">
-      <button onclick="exportGame()" class="secondary" style="width: 100%; margin-bottom: 10px;">
-        <i class="fas fa-download"></i> Exportar Juego
-      </button>
-      <button onclick="importGame()" class="secondary" style="width: 100%; margin-bottom: 10px;">
-        <i class="fas fa-upload"></i> Importar Juego
-      </button>
-      <button onclick="document.getElementById('keyboard-shortcuts').style.display='block'" style="width: 100%; margin-bottom: 10px;">
-        <i class="fas fa-keyboard"></i> Atajos de Teclado
-      </button>
+</div>
+
+<!-- Modal Victoria -->
+<div id="win-modal" class="modal-overlay">
+    <div class="modal" style="border-color: var(--gold-accent);">
+        <h1 style="color: var(--gold-accent); font-size: 3em; margin: 10px 0;">¡Victoria!</h1>
+        <p>¡Has completado el solitario!</p>
+        <div style="margin: 20px 0; font-size: 1.2em;">
+            <p>Puntuación: <strong id="final-score" style="color:var(--gold-accent)">0</strong></p>
+            <p>Tiempo: <strong id="final-time">00:00</strong></p>
+        </div>
+        <button class="btn-green" style="width:100%; justify-content:center; padding: 12px;" onclick="Game.init()">Jugar Otra Vez</button>
     </div>
-    
-    <div style="display: flex; gap: 10px;">
-      <button onclick="panel.remove()" style="flex: 1;"><i class="fas fa-times"></i> Cerrar</button>
-      <button onclick="resetSettings()" class="danger" style="flex: 1;"><i class="fas fa-undo"></i> Resetear</button>
-    </div>
-  `;
-  
-  document.body.appendChild(panel);
-}
-
-function toggleTheme() {
-  document.body.classList.toggle("dark");
-  showToast("Tema cambiado", "info");
-}
-
-function toggleSound() {
-  config.soundEnabled = !config.soundEnabled;
-  showToast(config.soundEnabled ? "Sonido activado" : "Sonido desactivado", "info");
-  saveGame();
-}
-
-function toggleMusic() {
-  config.musicEnabled = !config.musicEnabled;
-  if (config.musicEnabled) {
-    bgMusic.play().catch(() => {});
-    showToast("Música activada", "info");
-  } else {
-    bgMusic.pause();
-    showToast("Música desactivada", "info");
-  }
-  saveGame();
-}
-
-/* =========================
-   UNDO MEJORADO
-========================= */
-
-function undoMove() {
-  if (history.length === 0) {
-    showToast("No hay movimientos para deshacer", "warning");
-    return;
-  }
-  
-  const prevState = history.pop();
-  tableau = prevState.tableau;
-  foundations = prevState.foundations;
-  stock = prevState.stock;
-  waste = prevState.waste;
-  score = prevState.score;
-  moves = prevState.moves;
-  
-  updateAll();
-  showToast("Movimiento deshecho", "info");
-}
-
-/* =========================
-   INICIALIZACIÓN
-========================= */
-
-// Estilos para el switch
-const style = document.createElement('style');
-style.textContent = `
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 24px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 24px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 16px;
-  width: 16px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-}
-
-input:checked + .slider {
-  background-color: #1abc9c;
-}
-
-input:checked + .slider:before {
-  transform: translateX(26px);
-}
-`;
-document.head.appendChild(style);
-
-// Atajos de teclado
-document.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  
-  switch(e.key.toLowerCase()) {
-    case 'n':
-      if (e.ctrlKey) newGame();
-      break;
-    case 'z':
-      if (e.ctrlKey) undoMove();
-      break;
-    case 'h':
-      showHint();
-      break;
-    case 'a':
-      autoComplete();
-      break;
-    case 'd':
-      drawFromStock();
-      break;
-    case 'escape':
-      document.querySelectorAll('.stats-panel, #options-panel').forEach(panel => panel.remove());
-      break;
-  }
-});
-
-// Inicializar música de fondo
-const bgMusic = new Audio("https://assets.mixkit.co/music/preview/mixkit-game-level-music-689.mp3");
-bgMusic.loop = true;
-bgMusic.volume = 0.3;
-
-// Cargar juego al inicio
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    document.getElementById('loader').remove();
-    loadGame();
-    
-    // Iniciar música en primer interacción
-    document.addEventListener('click', () => {
-      if (config.musicEnabled && bgMusic.paused) {
-        bgMusic.play().catch(() => {});
-      }
-    }, { once: true });
-  }, 1500);
-});
-
-// Auto-guardar cada 30 segundos
-setInterval(() => {
-  if (config.autoSave && gameActive) {
-    saveGame();
-  }
-}, 30000);
-</script>
-
-<!-- Pantalla de carga -->
-<div id="loader">
-  <div style="text-align: center;">
-    <div style="font-size: 48px; margin-bottom: 20px;">🂡</div>
-    <div style="font-size: 2em; margin-bottom: 10px;">Solitario ULTRA</div>
-    <div style="opacity: 0.7; font-size: 0.8em;">Cargando experiencia premium...</div>
-    <div style="margin-top: 20px; width: 200px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
-      <div id="loader-bar" style="height: 100%; background: #1abc9c; width: 0%; transition: width 0.3s;"></div>
-    </div>
-  </div>
 </div>
 
 <script>
-// Animación de carga
-window.addEventListener('load', () => {
-  const loaderBar = document.getElementById('loader-bar');
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += Math.random() * 20;
-    loaderBar.style.width = `${Math.min(progress, 100)}%`;
-    if (progress >= 100) clearInterval(interval);
-  }, 100);
-});
+/**
+ * AUDIO MANAGER
+ * Usa los sonidos originales de tu primer archivo
+ */
+const AudioMgr = {
+    enabled: true,
+    sounds: {
+        move: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-slide-1538.mp3"),
+        flip: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-flip-1554.mp3"),
+        win: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
+        deal: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-card-dealing-1561.mp3"),
+        success: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3")
+    },
+    
+    play(name) {
+        if (!this.enabled || !this.sounds[name]) return;
+        this.sounds[name].currentTime = 0;
+        this.sounds[name].play().catch(() => {});
+    },
+    
+    toggle(state) {
+        this.enabled = state;
+        UI.showToast(state ? "Sonido Activado" : "Sonido Desactivado");
+    }
+};
+
+/**
+ * UI MANAGER
+ */
+const UI = {
+    showToast(msg, icon="info-circle") {
+        const container = document.getElementById('toast-container');
+        const el = document.createElement('div');
+        el.className = 'toast';
+        el.innerHTML = `<i class="fas fa-${icon}" style="color:var(--gold-accent)"></i> ${msg}`;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+    },
+    
+    toggleSettings() {
+        const modal = document.getElementById('settings-modal');
+        modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    }
+};
+
+/**
+ * GAME ENGINE
+ */
+const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
+const SUIT_DATA = { 
+    'hearts': { color: 'red', symbol: '♥' }, 
+    'diamonds': { color: 'red', symbol: '♦' }, 
+    'clubs': { color: 'black', symbol: '♣' }, 
+    'spades': { color: 'black', symbol: '♠' } 
+};
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+class Card {
+    constructor(suit, rank, id) {
+        this.suit = suit;
+        this.rank = rank;
+        this.id = id;
+        this.faceUp = false;
+        this.value = rank + 1;
+        this.color = SUIT_DATA[suit].color;
+        this.symbol = SUIT_DATA[suit].symbol;
+        this.name = RANKS[rank];
+    }
+
+    createDOM() {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.id = this.id;
+        div.dataset.color = this.color;
+        div.setAttribute('data-face', this.faceUp ? 'up' : 'down');
+
+        div.innerHTML = `<div class="card-back"><div class="back-pattern"></div></div>`;
+
+        const face = document.createElement('div');
+        face.className = 'card-face';
+        
+        const top = document.createElement('div');
+        top.className = 'corner';
+        top.innerHTML = `<span>${this.name}</span><span>${this.symbol}</span>`;
+
+        const center = document.createElement('div');
+        center.className = 'center-area';
+        
+        if (this.value > 10) { 
+            center.innerHTML = `<div class="royal-box"><span class="royal-letter">${this.name}</span><span class="royal-suit">${this.symbol}</span></div>`;
+        } else if (this.value === 1) {
+            center.innerHTML = `<span class="pip-simple" style="font-size: 50px">${this.symbol}</span>`;
+        } else {
+            center.innerHTML = `<span class="pip-simple">${this.symbol}</span>`;
+        }
+
+        const btm = top.cloneNode(true);
+        btm.className = 'corner btm';
+
+        face.appendChild(top);
+        face.appendChild(center);
+        face.appendChild(btm);
+        div.appendChild(face);
+
+        div.addEventListener('mousedown', (e) => Input.dragStart(e, this));
+        div.addEventListener('touchstart', (e) => Input.dragStart(e, this), {passive: false});
+        div.addEventListener('dblclick', () => Game.autoMove(this));
+
+        return div;
+    }
+}
+
+const Game = {
+    // Config
+    drawThree: false,
+    
+    // State
+    deck: [],
+    stock: [], waste: [],
+    foundations: [[],[],[],[]],
+    tableau: [[],[],[],[],[],[],[]],
+    history: [],
+    score: 0, moves: 0,
+    startTime: null, timerInt: null,
+
+    init() {
+        this.reset();
+        this.createDeck();
+        this.shuffle();
+        this.deal();
+        this.startTimer();
+        this.render();
+        
+        AudioMgr.play('deal');
+        UI.showToast("¡Nueva partida iniciada!", "play");
+        document.getElementById('win-modal').style.display = 'none';
+        document.getElementById('settings-modal').style.display = 'none';
+    },
+    
+    newGameConfirm() {
+        if (this.moves > 0 && confirm("¿Abandonar partida actual y empezar una nueva?")) {
+            this.init();
+        } else if (this.moves === 0) {
+            this.init();
+        }
+    },
+    
+    setDrawMode(isThree) {
+        this.drawThree = isThree;
+        // Solo afecta al siguiente draw, no resetea el juego actual inmediatamente a menos que se quiera
+        UI.showToast(`Modo cambiado: Robar ${isThree ? '3' : '1'} carta(s)`);
+    },
+
+    reset() {
+        this.stock = []; this.waste = [];
+        this.foundations = [[],[],[],[]];
+        this.tableau = [[],[],[],[],[],[],[]];
+        this.history = [];
+        this.score = 0; this.moves = 0;
+        clearInterval(this.timerInt);
+        document.getElementById('timer').innerText = "00:00";
+        document.getElementById('btn-auto').style.display = 'none';
+    },
+
+    createDeck() {
+        this.deck = [];
+        let id = 0;
+        for (let s of SUITS) {
+            for (let r = 0; r < 13; r++) {
+                this.deck.push(new Card(s, r, `c-${id++}`));
+            }
+        }
+    },
+
+    shuffle() { this.deck.sort(() => Math.random() - 0.5); },
+
+    deal() {
+        let idx = 0;
+        for (let i=0; i<7; i++) {
+            for (let j=0; j<=i; j++) {
+                const c = this.deck[idx++];
+                if (j===i) c.faceUp = true;
+                this.tableau[i].push(c);
+            }
+        }
+        while(idx < 52) this.stock.push(this.deck[idx++]);
+    },
+
+    drawCard() {
+        this.pushState();
+        AudioMgr.play('flip');
+        
+        if (this.stock.length === 0) {
+            if (this.waste.length === 0) return;
+            // Reciclar
+            this.stock = this.waste.reverse().map(c => { c.faceUp = false; return c; });
+            this.waste = [];
+            this.score = Math.max(0, this.score - 100);
+            UI.showToast("Mazo reciclado (-100 pts)");
+        } else {
+            const count = this.drawThree ? Math.min(3, this.stock.length) : 1;
+            for(let i=0; i<count; i++) {
+                const c = this.stock.pop();
+                c.faceUp = true;
+                this.waste.push(c);
+            }
+        }
+        this.moves++;
+        this.render();
+    },
+
+    isValidMove(card, targetPile, type) {
+        if (type === 'foundation') {
+            if (targetPile.length === 0) return card.value === 1;
+            const top = targetPile[targetPile.length-1];
+            return top.suit === card.suit && card.value === top.value + 1;
+        } 
+        if (type === 'tableau') {
+            if (targetPile.length === 0) return card.value === 13; 
+            const top = targetPile[targetPile.length-1];
+            return top.color !== card.color && top.value === card.value + 1;
+        }
+        return false;
+    },
+
+    executeMove(cards, sourcePile, targetPile, type, record=true) {
+        if (record) this.pushState();
+
+        const idx = sourcePile.indexOf(cards[0]);
+        sourcePile.splice(idx, cards.length);
+
+        // Destapar
+        if (sourcePile.length > 0 && this.tableau.includes(sourcePile)) {
+            const top = sourcePile[sourcePile.length-1];
+            if (!top.faceUp) {
+                top.faceUp = true;
+                this.score += 5;
+                AudioMgr.play('flip');
+            }
+        }
+
+        cards.forEach(c => targetPile.push(c));
+        
+        if (type === 'foundation') {
+            this.score += 10;
+            AudioMgr.play('success');
+            UI.showToast(`+10 Puntos (${cards[0].name}${cards[0].symbol})`, "star");
+        } else {
+            AudioMgr.play('move');
+        }
+        
+        this.moves++;
+        this.render();
+        this.checkWin();
+    },
+
+    autoMove(card) {
+        if (!card.faceUp) return;
+        const loc = this.locateCard(card);
+        if (!loc || loc.pile[loc.pile.length-1] !== card) return;
+
+        for (let i=0; i<4; i++) {
+            if (this.isValidMove(card, this.foundations[i], 'foundation')) {
+                this.executeMove([card], loc.pile, this.foundations[i], 'foundation');
+                return;
+            }
+        }
+    },
+
+    locateCard(card) {
+        if (this.waste.includes(card)) return { pile: this.waste };
+        for (let t of this.tableau) if (t.includes(card)) return { pile: t };
+        for (let f of this.foundations) if (f.includes(card)) return { pile: f };
+        return null;
+    },
+
+    showHint() {
+        // Limpiar highlights previos
+        document.querySelectorAll('.hint-highlight').forEach(el => el.classList.remove('hint-highlight'));
+
+        const check = (card, sourcePile) => {
+            // Check Foundation
+            for(let i=0; i<4; i++) {
+                if(this.isValidMove(card, this.foundations[i], 'foundation')) {
+                    this.highlight(card.id, `fnd-${i}`);
+                    return true;
+                }
+            }
+            // Check Tableau
+            if (this.tableau.includes(sourcePile) && sourcePile.indexOf(card) > 0) return false;
+            for(let i=0; i<7; i++) {
+                const t = this.tableau[i];
+                if(t !== sourcePile && this.isValidMove(card, t, 'tableau')) {
+                    this.highlight(card.id, `tab-${i}`);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        // 1. Waste
+        if (this.waste.length > 0) {
+            if (check(this.waste[this.waste.length-1], this.waste)) return;
+        }
+        // 2. Tableau
+        for(let t of this.tableau) {
+            if (t.length > 0) {
+                // Check all faceup cards? No, just visible sequences ideally, but checking top is safer for hints
+                // Check deep cards too
+                for (let c of t) {
+                    if (c.faceUp && check(c, t)) return;
+                }
+            }
+        }
+        
+        UI.showToast("No hay movimientos disponibles", "exclamation-circle");
+        AudioMgr.play('error'); // Sonido de error si no hay hint
+    },
+
+    highlight(cardId, destId) {
+        const el = document.getElementById(cardId);
+        const dest = document.getElementById(destId);
+        if(el) el.classList.add('hint-highlight');
+        if(dest) {
+             dest.classList.add('hint-highlight'); 
+             setTimeout(() => dest.classList.remove('hint-highlight'), 1500);
+        }
+        setTimeout(() => el.classList.remove('hint-highlight'), 1500);
+        
+        UI.showToast("¡Pista encontrada! (-2 pts)");
+        this.score = Math.max(0, this.score - 2);
+        this.render();
+    },
+
+    checkWin() {
+        const stockEmpty = this.stock.length === 0;
+        let allFaceUp = true;
+        this.tableau.forEach(col => col.forEach(c => { if(!c.faceUp) allFaceUp = false; }));
+        
+        if (stockEmpty && allFaceUp) {
+            document.getElementById('btn-auto').style.display = 'flex';
+        }
+
+        let totalFnd = 0;
+        this.foundations.forEach(f => totalFnd += f.length);
+        if (totalFnd === 52) {
+            clearInterval(this.timerInt);
+            document.getElementById('final-score').innerText = this.score;
+            document.getElementById('final-time').innerText = document.getElementById('timer').innerText;
+            document.getElementById('win-modal').style.display = 'flex';
+            AudioMgr.play('win');
+        }
+    },
+
+    autoComplete() {
+        UI.showToast("Auto-completando...", "magic");
+        const interval = setInterval(() => {
+            let moved = false;
+            for (let col of this.tableau) {
+                if (col.length > 0) {
+                    const c = col[col.length-1];
+                    for (let f of this.foundations) {
+                        if (this.isValidMove(c, f, 'foundation')) {
+                            this.executeMove([c], col, f, 'foundation', false);
+                            moved = true;
+                            break;
+                        }
+                    }
+                }
+                if (moved) break;
+            }
+            if (!moved && this.waste.length > 0) {
+                const c = this.waste[this.waste.length-1];
+                for (let f of this.foundations) {
+                    if (this.isValidMove(c, f, 'foundation')) {
+                        this.executeMove([c], this.waste, f, 'foundation', false);
+                        moved = true;
+                        break;
+                    }
+                }
+            }
+            if (!moved) clearInterval(interval);
+        }, 100);
+    },
+
+    pushState() {
+        const state = JSON.stringify({
+            stock: this.stock.map(this.serialize),
+            waste: this.waste.map(this.serialize),
+            foundations: this.foundations.map(p => p.map(this.serialize)),
+            tableau: this.tableau.map(p => p.map(this.serialize)),
+            score: this.score, moves: this.moves
+        });
+        this.history.push(state);
+        if (this.history.length > 20) this.history.shift();
+    },
+    
+    serialize(c) { return {s:c.suit, r:c.rank, f:c.faceUp, id:c.id}; },
+    
+    undo() {
+        if (this.history.length === 0) {
+            UI.showToast("No hay más movimientos");
+            return;
+        }
+        const prev = JSON.parse(this.history.pop());
+        const restore = (d) => { const c = new Card(d.s, d.r, d.id); c.faceUp = d.f; return c; };
+        
+        this.stock = prev.stock.map(restore);
+        this.waste = prev.waste.map(restore);
+        this.foundations = prev.foundations.map(p => p.map(restore));
+        this.tableau = prev.tableau.map(p => p.map(restore));
+        this.score = prev.score;
+        this.moves = prev.moves;
+        this.render();
+        UI.showToast("Deshacer");
+    },
+
+    render() {
+        document.getElementById('score').innerText = this.score;
+        document.getElementById('moves').innerText = this.moves;
+
+        const elStock = document.getElementById('stock');
+        elStock.innerHTML = '';
+        elStock.className = this.stock.length === 0 ? 'slot refresh-stock' : 'slot';
+        if (this.stock.length > 0) {
+            const c = document.createElement('div');
+            c.className = 'card';
+            c.innerHTML = '<div class="card-back" style="display:block"><div class="back-pattern"></div></div>';
+            elStock.appendChild(c);
+        }
+
+        const elWaste = document.getElementById('waste');
+        elWaste.innerHTML = '';
+        if (this.waste.length > 0) {
+            // Mostrar hasta 3 cartas visualmente si hay espacio? Por ahora solo top para simpleza
+            elWaste.appendChild(this.waste[this.waste.length-1].createDOM());
+        }
+
+        for(let i=0; i<4; i++) {
+            const el = document.getElementById(`fnd-${i}`);
+            while(el.firstChild) el.firstChild.remove();
+            if (this.foundations[i].length > 0) {
+                const c = this.foundations[i][this.foundations[i].length-1];
+                const cardDom = c.createDOM();
+                cardDom.style.top = '0';
+                el.appendChild(cardDom);
+            }
+        }
+
+        for(let i=0; i<7; i++) {
+            const el = document.getElementById(`tab-${i}`);
+            el.innerHTML = '';
+            this.tableau[i].forEach((c, idx) => {
+                const dom = c.createDOM();
+                dom.style.top = (idx * 30) + 'px';
+                el.appendChild(dom);
+            });
+        }
+    },
+
+    startTimer() {
+        this.startTime = Date.now();
+        this.timerInt = setInterval(() => {
+            const diff = Math.floor((Date.now() - this.startTime)/1000);
+            const m = Math.floor(diff/60).toString().padStart(2,'0');
+            const s = (diff%60).toString().padStart(2,'0');
+            document.getElementById('timer').innerText = `${m}:${s}`;
+        }, 1000);
+    }
+};
+
+const Input = {
+    data: null,
+
+    dragStart(e, card) {
+        if (!card.faceUp) return;
+        if (e.button !== 0 && e.type !== 'touchstart') return;
+        e.preventDefault();
+
+        const loc = Game.locateCard(card);
+        if (!loc) return;
+        
+        if (!Game.tableau.includes(loc.pile) && loc.pile[loc.pile.length-1] !== card) return;
+
+        const idx = loc.pile.indexOf(card);
+        const cardsToDrag = loc.pile.slice(idx);
+        
+        const cx = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const cy = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        const rect = document.getElementById(card.id).getBoundingClientRect();
+        
+        this.data = {
+            cards: cardsToDrag,
+            sourcePile: loc.pile,
+            ghosts: []
+        };
+        
+        cardsToDrag.forEach((c, i) => {
+            const realEl = document.getElementById(c.id);
+            const ghost = realEl.cloneNode(true);
+            const realRect = realEl.getBoundingClientRect();
+            
+            ghost.classList.add('dragging');
+            ghost.style.position = 'fixed';
+            ghost.style.left = realRect.left + 'px';
+            ghost.style.top = realRect.top + 'px';
+            ghost.style.width = 'var(--card-width)';
+            
+            ghost.dataset.dx = realRect.left - cx;
+            ghost.dataset.dy = realRect.top - cy;
+
+            document.body.appendChild(ghost);
+            this.data.ghosts.push(ghost);
+            realEl.style.opacity = 0;
+        });
+
+        document.addEventListener('mousemove', this.dragMove);
+        document.addEventListener('mouseup', this.dragEnd);
+        document.addEventListener('touchmove', this.dragMove, {passive:false});
+        document.addEventListener('touchend', this.dragEnd);
+    },
+
+    dragMove: (e) => {
+        if (!Input.data) return;
+        e.preventDefault();
+        const cx = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const cy = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+        Input.data.ghosts.forEach(g => {
+            const dx = parseFloat(g.dataset.dx);
+            const dy = parseFloat(g.dataset.dy);
+            g.style.left = (cx + dx) + 'px';
+            g.style.top = (cy + dy) + 'px';
+        });
+    },
+
+    dragEnd: (e) => {
+        if (!Input.data) return;
+        
+        const cx = e.type.includes('touch') ? e.changedTouches[0].clientX : e.clientX;
+        const cy = e.type.includes('touch') ? e.changedTouches[0].clientY : e.clientY;
+
+        Input.data.ghosts.forEach(g => g.style.display = 'none');
+        const hitEl = document.elementFromPoint(cx, cy);
+        Input.data.ghosts.forEach(g => g.style.display = 'block');
+        
+        let valid = false;
+        
+        if (hitEl) {
+            const fSlot = hitEl.closest('.foundation');
+            if (fSlot && Input.data.cards.length === 1) {
+                const idx = parseInt(fSlot.id.split('-')[1]);
+                const pile = Game.foundations[idx];
+                if (Game.isValidMove(Input.data.cards[0], pile, 'foundation')) {
+                    Game.executeMove(Input.data.cards, Input.data.sourcePile, pile, 'foundation');
+                    valid = true;
+                }
+            }
+            const tSlot = hitEl.closest('.tableau-col');
+            if (tSlot) {
+                const idx = parseInt(tSlot.id.split('-')[1]);
+                const pile = Game.tableau[idx];
+                if (Game.isValidMove(Input.data.cards[0], pile, 'tableau')) {
+                    Game.executeMove(Input.data.cards, Input.data.sourcePile, pile, 'tableau');
+                    valid = true;
+                }
+            }
+        }
+
+        Input.data.ghosts.forEach(g => g.remove());
+        Input.data.cards.forEach(c => {
+            const el = document.getElementById(c.id);
+            if(el) el.style.opacity = 1;
+        });
+
+        Input.data = null;
+        document.removeEventListener('mousemove', Input.dragMove);
+        document.removeEventListener('mouseup', Input.dragEnd);
+        document.removeEventListener('touchmove', Input.dragMove);
+        document.removeEventListener('touchend', Input.dragEnd);
+    }
+};
+
+Input.dragMove = Input.dragMove.bind(Input);
+Input.dragEnd = Input.dragEnd.bind(Input);
+
+Game.init();
 </script>
-
-<!-- Atajos de teclado -->
-<div id="keyboard-shortcuts" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); padding: 30px; border-radius: 15px; z-index: 10000; min-width: 300px; border: 2px solid #3498db;">
-  <h3 style="margin-top: 0; color: #3498db;"><i class="fas fa-keyboard"></i> Atajos de Teclado</h3>
-  <div style="margin: 20px 0;">
-    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
-      <span><kbd>Ctrl</kbd> + <kbd>N</kbd></span>
-      <span>Nuevo juego</span>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
-      <span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span>
-      <span>Deshacer movimiento</span>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
-      <span><kbd>H</kbd></span>
-      <span>Mostrar hint</span>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
-      <span><kbd>A</kbd></span>
-      <span>Auto-completar</span>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
-      <span><kbd>D</kbd></span>
-      <span>Sacar carta del stock</span>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
-      <span><kbd>Esc</kbd></span>
-      <span>Cerrar ventanas</span>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
-      <span>Doble clic</span>
-      <span>Mover automáticamente</span>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin: 10px 0;">
-      <span>Clic derecho</span>
-      <span>Mover rápido a foundation</span>
-    </div>
-  </div>
-  <button onclick="document.getElementById('keyboard-shortcuts').style.display='none'" style="width: 100%;">
-    <i class="fas fa-times"></i> Cerrar
-  </button>
-</div>
-
 </body>
 </html>
